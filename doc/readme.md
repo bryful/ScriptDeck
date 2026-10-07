@@ -1,28 +1,15 @@
 # ScriptDeck ドキュメント
 
-ScriptDeckのAPI仕様、使用例、実装履歴をまとめています。
-
-## API・機能の説明
+用途別にAPIと使い方をまとめています。
 
 | ファイル | 内容 |
 | --- | --- |
-| [BUILTINS.md](BUILTINS.md) | 組み込み関数の一覧。起動引数、JSON、標準入出力、ファイル操作、音声、パス文字列、ウィンドウ制御、コード実行など。 |
-| [OBJECT_API.md](OBJECT_API.md) | カード・部品の検索、プロパティの読み書き、リスト項目と選択状態の操作、部品の動的作成・複製・削除など。 |
-| [NAVIGATION_API.md](NAVIGATION_API.md) | カード移動、Deckの切り替え、Homeへの移動、自動保存の指定、起動時のHome作成について。 |
-| [DAY2_API.md](DAY2_API.md) | Checkbox／RadioButtonの状態とイベント、ファイル選択・保存ダイアログ、複数ファイルのドロップについて。 |
-| [VERSION1.md](VERSION1.md) | Playerの1行スクリプト入力、実行ファイル・Deckのアイコン、`.deck`ファイルの関連付けについて。 |
-| [SCRIPT_API.md](SCRIPT_API.md) | JavaScriptとホストアプリの接続仕様。モード切り替え、コンソール制御などの実装契約について。 |
+| [USER_GUIDE.md](USER_GUIDE.md) | Player／Magic、1行スクリプト入力、アイコン、Deckの関連付け。 |
+| [SCRIPT_API.md](SCRIPT_API.md) | スクリプトの実行タイミング、スコープ、クリック・状態変更・ドロップイベント、runCode。 |
+| [OBJECT_API.md](OBJECT_API.md) | カード・部品の検索、プロパティ、リスト、Checkbox／RadioButton、動的作成・削除。 |
+| [NAVIGATION_API.md](NAVIGATION_API.md) | カード・Deck移動、Home、移動時の保存。 |
+| [APP_API.md](APP_API.md) | 起動引数、標準入出力、音声、モード・ウィンドウ制御、フォルダパス、クリップボード。 |
+| [FILE_API.md](FILE_API.md) | テキスト・バイナリーファイル、ファイル操作、選択・保存ダイアログ、パス文字列。 |
+| [HISTORY.md](HISTORY.md) | 過去の変更と検証の記録。 |
 
-## 実装履歴・変更記録
-
-| ファイル | 内容 |
-| --- | --- |
-| [OBJECT_CHANGES.md](OBJECT_CHANGES.md) | カード・部品APIを追加した際の変更ファイルと検証内容。 |
-| [DEVELOPMENT_HISTORY.md](DEVELOPMENT_HISTORY.md) | 組み込み関数の実装時の説明、サンプルの使用方法、検証内容を保存した開発記録。 |
-
-実装履歴には、変更当時のファイル配置やソリューション名が記載されています。現在のビルド手順とフォルダ構成は、[ルートのREADME.md](../README.md)を参照してください。
-
-## ライセンス
-
-- [LICENSE](../LICENSE)：ScriptDeck本体のMITライセンス。
-- [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md)：同梱する第三者コード・データの著作権表示とライセンス。
+ビルド手順は [ルートREADME.md](../README.md)、ライセンスは [LICENSE](../LICENSE) と [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md) を参照してください。

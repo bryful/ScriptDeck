@@ -133,4 +133,26 @@ for (const object of app.currentCard.objects) object.remove();
 
 ## Checkbox / RadioButton
 
-checkbox / radiobuttonとchecked、RadioButtonのgroupを追加。changeイベントと排他制御の詳細はDAY2_API.mdを参照してください。
+Magicの「部品を追加」にcheckbox / radiobuttonを追加しました。「チェック状態」を編集でき、RadioButtonは「グループ」も編集できます。位置・サイズ・文字・色・表示・有効状態と、動的作成・複製・削除は既存部品と同じです。
+
+```javascript
+const card = app.currentCard;
+const checkbox = card.createObject("checkbox", {
+    name: "option", text: "オプションを使う", checked: true,
+    x: 20, y: 20, width: 260, height: 32
+});
+const radioA = card.createObject("radiobutton", {
+    name: "radioA", text: "A", group: "choice", checked: true
+});
+const radioB = card.createObject("radiobutton", {
+    name: "radioB", text: "B", group: "choice"
+});
+radioB.checked = true; // radioA.checkedはfalseになる
+alert(checkbox.checked);
+```
+
+checkedはbooleanで既定値false。RadioButtonのgroupはstringで既定値空文字です。同じカード・同じgroupは最大1つだけcheckedになります。空文字同士も1グループです。別カードの同名groupとは独立しています。スクリプトでは全RadioButtonを未選択にすることもできます。非表示・無効のRadioButtonも排他処理の対象です。
+
+チェック状態を保ったRadioButtonのgroup変更・動的作成・複製でも、移動先グループの他のRadioButtonを解除します。checked/groupはDeckに保存し、古いDeckにフィールドがなくても既定値で読み込めます。同一グループに複数のcheckedを含む不正なDeckは読み込みを拒否します。
+
+状態変更イベントは [SCRIPT_API.md](SCRIPT_API.md#状態変更-change) を参照してください。

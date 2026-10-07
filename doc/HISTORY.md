@@ -1,6 +1,12 @@
+# 開発・変更記録
+
+過去の変更説明と検証記録です。記載のソリューション名・配置は変更当時のものです。現在の仕様はカテゴリ別のAPI文書、ビルド手順は [ルートREADME.md](../README.md) を参照してください。
+
+## 組み込み関数の導入
+
 # 組み込み関数実装版
 
-これまで一覧にしたapp / fs / alert / JSON / runCodeを実装しました。全関数と仕様はBUILTINS.mdを参照してください。
+これまで一覧にしたapp / fs / alert / JSON / runCodeを実装しました。全関数と仕様はAPP_API.md / FILE_API.mdを参照してください。
 
 今回もプロジェクト一式を展開し、同梱のScriptDeck.slnからビルドしてください。ScriptIO.h / ScriptIO.cppを追加し、WAV用のwinmm.libをリンクしています。
 
@@ -10,9 +16,9 @@ GUI起動のDeck指定後の引数はすべてスクリプトへ渡します。�
 
 検証: 実エンジンで複数引数・JSON・BOM有り無し・追記・バイナリーファイル・fs操作・別ファイルシステムへの移動・runCodeのスコープ・終了要求を確認。実際のstdin/stdoutパイプで全256バイトやNUL/CRLFの一致を確認。モード・コンソール・音声はホストコールバックとの接続をテスト。Windowsのコンソール再接続・WAV/Beep音・GUI切り替えは実機未確認です。
 
-変更: ScriptEngine.h / ScriptEngine.cpp / GuiView.cpp / GuiWindow.cpp / LaunchOptions.h / LaunchOptions.cpp / ScriptDeck.vcxproj / CMakeLists.txt。新規: ScriptIO.h / ScriptIO.cpp / BUILTINS.md / builtin-test.deck / tests/BuiltinTests.cpp。これまでのalert確認デッキとテストも同梱しています。
+変更: ScriptEngine.h / ScriptEngine.cpp / GuiView.cpp / GuiWindow.cpp / LaunchOptions.h / LaunchOptions.cpp / ScriptDeck.vcxproj / CMakeLists.txt。新規: ScriptIO.h / ScriptIO.cpp / APP_API.md / FILE_API.md / builtin-test.deck / tests/BuiltinTests.cpp。これまでのalert確認デッキとテストも同梱しています。
 
-以下は過去版の記録です。現行の組み込みAPIについてはBUILTINS.mdを参照してください。
+以下は過去版の記録です。現行の組み込みAPIについてはAPP_API.md / FILE_API.mdを参照してください。
 
 ---
 
@@ -245,8 +251,55 @@ card.createObject / removeObject、object.remove / clone、一覧取得と並べ
 
 ## Checkbox / RadioButton・ファイル選択・ドロップ
 
-DAY2_API.mdを参照してください。day2-test.deckにGUI・スクリプトの操作例を収録しました。FileDialogs.h/.cppを追加したため、更新済み.vcxprojでリビルドしてください。
+SCRIPT_API.mdを参照してください。day2-test.deckにGUI・スクリプトの操作例を収録しました。FileDialogs.h/.cppを追加したため、更新済み.vcxprojでリビルドしてください。
 
 カード移動・Deck切り替え・Home起動については [NAVIGATION_API.md](NAVIGATION_API.md) を参照してください。
 
-Version 1.0のPlayerスクリプト入力、アイコン、`app.install()` / `app.uninstall()` は [VERSION1.md](VERSION1.md) を参照してください。
+Version 1.0のPlayerスクリプト入力、アイコン、`app.install()` / `app.uninstall()` は [USER_GUIDE.md](USER_GUIDE.md) を参照してください。
+
+
+## 部品APIの導入
+
+# 今回の変更
+
+- ScriptModel.h/.cpp: 現在のDeckをIDで解決するプロパティ接続。検索、型・値検証、項目操作、変更通知。
+- ScriptEngine.h/.cpp: app.deck / app.currentCard、カード・オブジェクトのProxy、this / event.target。
+- GuiView.h / GuiWindow.cpp: 実行中のデータへの接続、Magicの未保存表示、イベントの対象参照。
+- ScriptDeck.vcxproj / CMakeLists.txt: 新規ソースとModelTestsの登録。
+- OBJECT_API.md: API仕様と使用例。
+- object-test.deck: 文字列更新、Listbox/DropdownList選択、項目追加の確認用Deck。
+
+新しいScriptDeck.slnを使ってリビルドしてください。Magicでは実行プレビューを有効にするとスクリプトを実行できます。
+
+確認: LinuxでQuickJS-NGを実際に実行し、検索・プロパティ・項目操作・参照寿命・不正値・イベント対象をテスト。従来のJavaScript/BuiltinTestsも成功。ImGuiのGUIテストで入力フォーカス、Enter/Escape、選択、Player/Magicの変更通知と保存を確認。Windows実機でのビルドと表示は未確認です。
+
+## 動的オブジェクトの追加
+
+ScriptModel.h/.cppとScriptEngine.cppに作成・削除・複製・一覧取得・順序変更を追加。削除したIDの実行中再利用を防止し、削除時のEnter/Escape設定を解除します。作成プロパティは追加前に検証します。CMakeにDynamicTestsを登録し、dynamic-test.deckを同梱しました。既存.vcxprojはScriptModel.cppをすでに含むためソース登録の変更はありません。
+
+## Magicの並べ替えUI
+
+GuiView.cppのカード一覧・部品一覧へ「上へ」「下へ」を追加。先頭・末尾・未選択の場合は移動を無効化します。現在カードと選択部品のIDを維持し、変更はタイトルの*と保存内容に反映します。部品一覧に描画順の説明を付けました。
+
+## プロパティラベルの見切れ修正
+
+GuiView.cppで文字・リスト項目・選択番号のラベルを入力欄の上へ移動し、幅いっぱいの入力欄から右へ押し出されないようにしました。
+
+## Checkbox / RadioButton・ダイアログ・ファイルドロップ
+
+- CardObject.h / Card.h / Stack.cpp: checked/groupとRadioButtonの排他制御、JSON保存・旧形式読み込み。
+- ScriptModel.cpp: 新プロパティ、動的作成・複製時の排他制御。
+- GuiView.h/.cpp: 新部品の編集・描画・changeキュー、カード領域でのドロップ判定。
+- ScriptEngine.h/.cpp: change/dropFilesとイベントデータ、Open/SaveFileDialogサービス。
+- FileDialogs.h/.cpp: オプション検証、WindowsのIFileOpenDialog/IFileSaveDialog。
+- GuiWindow.cpp: ExplorerのWM_DROPFILES受信、複数パス取得、描画後のイベント配送。
+- .vcxproj / CMakeLists.txt: 新規ファイル登録とテスト。
+- SCRIPT_API.md / day2-test.deck: 説明と操作例。
+
+QuickJS・ImGuiで状態・イベント・排他・保存・ドロップ領域・ダイアログの接続契約を検証。Windows実機のダイアログ表示とExplorerからの実ドロップは未確認です。
+
+
+## Checkbox・ダイアログ・ドロップの検証
+
+
+LinuxでQuickJS-NGの実エンジンとImGuiの描画・入力を使い、状態・排他制御・change/dropFiles・オプション・Unicodeパス・キャンセル・ダイアログ待機時間の扱い・Magic保存を検証しました。従来のスクリプト・組み込み関数・動的作成・並べ替えも回帰テスト済みです。Windowsでの実ダイアログ表示とExplorerからの実ドロップは未確認です。

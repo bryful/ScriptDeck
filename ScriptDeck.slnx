@@ -2,5 +2,5 @@
   <Configurations>
     <Platform Name="x64" />
   </Configurations>
-  <Project Path="ScriptDeck/ScriptDeck.vcxproj" />
+  <Project Path="ScriptDeck/ScriptDeck.vcxproj" Id="81f01b9d-214b-42a0-b1c2-7eafd5292e74" />
 </Solution>

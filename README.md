@@ -143,14 +143,15 @@ ScriptDeck.exe -run sample.deck copy output.deck
 
 ## ドキュメントとサンプル
 
-| ドキュメント | 内容 |
+| ファイル | 内容 |
 | --- | --- |
-| [VERSION1.md](doc/VERSION1.md) | Playerの入力欄、アイコン、関連付け |
-| [SCRIPT_API.md](doc/SCRIPT_API.md) | JavaScriptの実行とイベント |
-| [BUILTINS.md](doc/BUILTINS.md) | ファイル・入出力・音声・パス・ウィンドウAPI |
-| [OBJECT_API.md](doc/OBJECT_API.md) | 部品のプロパティと動的操作 |
-| [NAVIGATION_API.md](doc/NAVIGATION_API.md) | カード・Deck移動、Home |
-| [DAY2_API.md](doc/DAY2_API.md) | Checkbox、RadioButton、ファイルダイアログ、ドロップ |
+| [USER_GUIDE.md](doc/USER_GUIDE.md) | Player／Magic、1行スクリプト入力、アイコン、Deckの関連付け。 |
+| [SCRIPT_API.md](doc/SCRIPT_API.md) | スクリプトの実行タイミング、スコープ、クリック・状態変更・ドロップイベント、runCode。 |
+| [OBJECT_API.md](doc/OBJECT_API.md) | カード・部品の検索、プロパティ、リスト、Checkbox／RadioButton、動的作成・削除。 |
+| [NAVIGATION_API.md](doc/NAVIGATION_API.md) | カード・Deck移動、Home、移動時の保存。 |
+| [APP_API.md](doc/APP_API.md) | 起動引数、標準入出力、音声、モード・ウィンドウ制御、フォルダパス、クリップボード。 |
+| [FILE_API.md](doc/FILE_API.md) | テキスト・バイナリーファイル、ファイル操作、選択・保存ダイアログ、パス文字列。 |
+| [HISTORY.md](doc/HISTORY.md) | 過去の変更と検証の記録。 |
 
 `ScriptDeck/` に `sample.deck` をはじめ、`builtin-test.deck`、`object-test.deck`、`dynamic-test.deck`、`day2-test.deck` を同梱しています。
 

@@ -1,4 +1,4 @@
-# ScriptDeck 1.0
+# Player・Magicの使い方
 
 ## Playerのスクリプト入力
 
@@ -44,21 +44,9 @@ Ctrl + Spaceの入力欄から実行できます。
 
 Windowsで既に別アプリを既定として選んでいる場合、登録だけで切り替わらないことがあります。その場合は `.deck` を右クリックし、「プログラムから開く」でScriptDeckを選んで既定に設定してください。WindowsのUserChoice設定を直接変更する処理は入れていません。
 
-## ビルド
+## ビルドと配布
 
-プロジェクト一式を更新し、Visual Studioで **Release / x64** をリビルドしてください。
-
-EXEのバージョン情報を `1.0.0`、CMakeのプロジェクトバージョンを `1.0.0` に設定しました。DeckのJSON形式のversionは互換性維持のため従来どおり1です。
-
-主な変更: `GuiView.h/.cpp`、`GuiWindow.cpp`、`ScriptEngine.h/.cpp`、`FileAssociation.h`、`WindowsAssociation.h`、`ResourceIds.h`、`ScriptDeck.rc`、アイコン、`ScriptDeck.vcxproj`、`CMakeLists.txt`。
-
-## 確認状況
-
-ヘッドレスGUIテストでサイズの長期安定性、実行前に入力ウィンドウとフォーカスを解除する順序、Ctrl + Space、1行入力、Run／Enter、Close／Escape、同じJS環境での実行、Magic切り替え、カードイベント抑止を確認します。レジストリ操作はメモリ上のテスト実装で、コマンド・アイコンパスの引用符、再登録、バックアップ復元、別EXEによる誤解除防止、他アプリの変更維持、登録失敗時の復元を確認します。
-
-この環境ではWindows上のReleaseビルド、レジストリの実登録、Explorerのアイコン表示は未確認です。
-
-参考: [ユーザー単位のファイル種類登録](https://learn.microsoft.com/en-us/windows/win32/shell/fa-file-types)、[関連付け変更の通知](https://learn.microsoft.com/en-us/windows/win32/api/shlobj_core/nf-shlobj_core-shchangenotify)、[Windowsの既定アプリ選択](https://learn.microsoft.com/en-us/windows/apps/develop/windows-integration/default-apps-platform)。
+ビルド手順は [ルートREADME.md](../README.md) を参照してください。バイナリー配布時はルートの `LICENSE` と `THIRD_PARTY_NOTICES.md` を同梱してください。
 
 ## MagicからPlayerへ
 

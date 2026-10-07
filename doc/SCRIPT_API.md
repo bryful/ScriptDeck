@@ -1,55 +1,6 @@
-﻿カード・オブジェクトの検索、プロパティ、リスト操作は **OBJECT_API.md** を参照してください。
+# JavaScript・イベント
 
-# 現在の実装範囲
-
-QuickJS-NG v0.16.2でapp / fs / alertを公開しています。全関数一覧はBUILTINS.mdを参照してください。app.setMagic / app.setConsoleModeはAppScriptApiへ接続済みです。ScriptHostは引数・起動フォルダ・モード・音声・標準ストリームのホスト接続を保持します。fsの処理はScriptIO、JavaScriptへの登録とrunCodeはScriptEngineへ実装しています。
-
-以下は既存ネイティブAPIの契約の記録です。
-
-
-﻿# ScriptDeckのスクリプトAPI接続仕様
-
-## app.setMagic
-
-```javascript
-app.setMagic(true);  // Player → Magic
-app.setMagic(false); // Magic → Player
-```
-
-引数はbooleanを1つ。戻り値はundefined。同じモードへの呼び出しは何もしない。
-別名のapp.setModeは公開しない。
-
-ネイティブ実装はAppScriptApi.hのAppScriptApi::setMagic(bool)。GuiView::SetMagic(bool)を呼ぶ。
-JavaScriptエンジンの初期化時にappオブジェクトを生成し、このメソッドをsetMagicとして必ず登録する。
-エンジン側のバインディングは引数数とboolean型を検証し、不正な呼び出しではTypeErrorを返す。型の暗黙変換は行わない。
-CLIではGUIインスタンスがないため利用不可としてスクリプトエラーにする。
-AppScriptApiはGuiViewを参照するため、エンジンとAPIをGuiViewより先に破棄する。
-UIスレッドで呼ぶ。スクリプトイベント処理を描画前に行い、モード変更を次の描画へ反映する。
-
-切り替えは同じStack、Card、CardObjectを維持する。編集内容やField入力を破棄しない。
-未保存状態を維持し、切り替えだけでは保存しない。Playerに切り替えても未保存変更があれば終了時に破棄確認する。
-Playerはカードのみの固定サイズ、Magicは編集UIとリサイズ可能ウィンドウ。
-MagicからPlayerへ切り替える時は、その時点のカードサイズと位置を使う。起動位置の復元・中央配置は再実行しない。
-Player→Magicへ切り替える際、Playerの位置・サイズを別設定ファイルへ記録する。
-Magicのウィンドウ位置・外寸はセッション中に保持し、次にMagicへ戻った時に復元する。
-
-現在はネイティブAPIとウィンドウ切り替えを実装済み。QuickJS-NGとappへのバインディングは実装済み。
-この仕様とAppScriptApi::SetMagicScriptNameを、スクリプト実装時の登録チェックに使う。
-
-## ボタンイベント配送
-
-GuiView::TakeButtonEvents()がcardId / buttonIdのキューを返してクリアする。マウスクリックとカードのEnter/Escape対象ボタンは同じPushButton経路を通る。スクリプト実装時は描画後にキューを取り出し、対象ButtonのmouseUpへ配送する。対象が非表示・無効の場合は配送しない。描画中に配列を変更するスクリプトを直接実行しない。現在のホストは描画後にキューを取り出し、部品コードの評価とmouseUpの呼び出しを実行する。
-
-FieldまたはInputBoxの入力フォーカス中はカードのEnter/Escape配送を無効にする。Dropdownのポップアップ操作中も無効にする。InputBoxはReturn/テンキーEnterを無視し、1行テキストと入力フォーカスを維持する。
-
-## app.setConsoleMode
-
-app.setConsoleMode(true)で実行中に親コンソールへ接続し、親がなければ作成します。falseでScriptDeckの接続を解除し、単独で作成したコンソールを閉じます。親のcmd/PowerShellは終了しません。再度trueを呼べます。標準入力・出力・エラーを再接続し、ファイル・パイプへのリダイレクトは切り替え後も維持します。無効中の非リダイレクト出力はNULへ送ります。デッキの保存状態・Player/Magicは変えません。
-
-C++のAppScriptApi::setConsoleMode(bool)は実装済みです。UIスレッドで呼びます。JavaScriptエンジン導入時はapp.setConsoleModeへバインドし、引数をbooleanに限定してください。ネイティブの失敗は例外です。JavaScriptのapp.setConsoleModeへバインド済みです。
-
-上書きはmain.cpp / GuiView.h / GuiView.cpp / GuiWindow.cpp / AppScriptApi.h、新規追加はConsoleMode.hです。Windowsでの実コンソール切り替えは実機未確認です。
-
+JavaScriptエンジンはQuickJS-NGです。共有の組み込みAPIとして `app` / `fs` / `alert` を使用できます。Magicの通常の編集状態ではスクリプトを実行せず、PlayerとMagicの実行プレビューで実行します。
 
 ## 実行タイミング
 
@@ -71,8 +22,74 @@ function openCard(event) {
 
 カードスクリプトのローカル変数・関数は、そのカードスクリプトの呼び出し内のスコープです。共有するものはDeckスクリプトに置きます。Magicへ戻って編集するとランタイムを破棄し、次のプレビュー開始時にDeckスクリプトから再実行します。
 
-## change / dropFiles
+## 部品のクリック mouseUp
 
-Checkbox / RadioButtonのchange(event)、カードのdropFiles(event)を追加。スクリプト全体を評価し、指定ハンドラをthis / event.targetと共に呼びます。実行プレビュー・Playerでのみ配送します。DAY2_API.mdを参照してください。
+部品スクリプトに次を定義します。`this` と `event.target` は押されたボタン、`event.type` は `"mouseUp"` です。
 
-カード移動・Deck切り替え・Home起動については [NAVIGATION_API.md](NAVIGATION_API.md) を参照してください。
+```javascript
+function mouseUp(event) {
+    this.card.objectByName("message").text = "クリックしました";
+}
+```
+
+マウス操作とカードで指定したEnter／Escapeボタンは同じイベントを発生させます。入力欄にフォーカスがある場合、Dropdownのポップアップ操作中はカードのEnter／Escape操作を無視します。非表示・無効のボタンへは配送しません。
+
+## 状態変更 change
+
+ユーザーが状態を変更すると、部品スクリプトのchange(event)を呼びます。
+
+```javascript
+function change(event) {
+    alert({ id: this.id, checked: event.checked, group: event.group });
+}
+```
+
+- event.typeは"change"、event.targetとthisは対象部品です。
+- event.checkedは操作時の状態のスナップショット。event.groupはRadioButtonのグループ（Checkboxは空文字）です。
+- RadioButtonは解除された部品のchange(false)、選択された部品のchange(true)の順で通知します。選択済みRadioButtonを再度押してもイベントを出しません。
+- スクリプトからの代入、Magicのプロパティ編集ではchangeを自動発生させません。
+- Magicの編集状態ではイベントを実行しません。Player・実行プレビューのクリックやキーボード操作で変更できます。
+
+## カードへのファイルドロップ
+
+カードスクリプトにdropFiles(event)を定義してください。
+
+```javascript
+function dropFiles(event) {
+    const list = this.objectByName("files");
+    if (list) list.items = event.paths;
+    alert({ paths: event.paths, x: event.x, y: event.y });
+}
+```
+
+- event.typeは"dropFiles"。this / event.targetは受け取ったカード。
+- event.pathsはUTF-8の絶対パス文字列配列。複数ファイルを1回のイベントで渡します。ドロップがフォルダの場合もそのパスを渡します。
+- event.x / event.yはカード左上からの座標。
+- PlayerとMagicの実行プレビューで、画面に見えているカード領域へのドロップだけを受け付けます。ツールバー・編集パネル・カード外は対象外です。
+- 描画の完了後にイベントを実行するため、ハンドラ内で部品を作成・削除できます。部品の上にドロップしてもカードへ通知します。
+- 受信後にカードが切り替わっても、ドロップ時のカードを対象にします。Deckを開き直したり新規作成した場合は古いイベントを破棄します。
+- openCardを再度呼ぶことはありません。ただし既存の部品イベントと同様、カードスクリプト全体を評価してからdropFilesを呼ぶため、カードの初期化処理はopenCard関数内に置いてください。
+
+## スコープと文字列コードの実行
+
+Deckスクリプトのグローバル関数・変数はカードや部品のイベントから利用できます。カード・部品スクリプト全体は各イベントの呼び出し時にローカルスコープで評価されます。部品名は自動で変数になりません。`app.currentCard.objectByName()` などで検索してください。
+
+`app.runCode(code)` は文字列をJavaScriptとして同期実行します。Deckで定義したグローバル関数・変数にアクセスできます。呼び出し元のイベント内のローカル変数は共有しません。strict evalのため、実行したコード内の宣言は呼び出し後のグローバル環境へ追加されません。
+
+```javascript
+// Deckスクリプト
+function greet(name) { return "Hello, " + name; }
+```
+
+```javascript
+// 部品イベント
+function mouseUp(event) {
+    alert(app.runCode('greet("ScriptDeck")'));
+}
+```
+
+## 実行制限とエラー
+
+JavaScriptメモリー上限は64 MiB、実行時間上限は2秒です。ダイアログやネイティブ入出力の待機時間は除外します。スクリプトエラーはソース名と詳細を含むダイアログで表示します。組み込み関数の失敗はtry/catchでも処理できます。
+
+カード・Deckの移動は [NAVIGATION_API.md](NAVIGATION_API.md)、部品の読み書きは [OBJECT_API.md](OBJECT_API.md)、組み込みAPIは [APP_API.md](APP_API.md) と [FILE_API.md](FILE_API.md) を参照してください。
