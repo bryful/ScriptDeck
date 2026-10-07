@@ -68,3 +68,35 @@ Playerのカードサイズ・タイトルと、Deck別の位置設定も更新�
 `ScriptEngine.h`、`ScriptEngine.cpp`、`GuiView.h`、`GuiView.cpp`、`GuiWindow.cpp`、`HomeDeck.h`、`ResourceIds.h`、`ScriptDeck.rc`、`assets/home.deck`、`ScriptDeck.vcxproj`、`CMakeLists.txt`。
 
 Resourceとプロジェクトの追加があるため、ZIPのプロジェクト一式を更新してリビルドしてください。
+
+
+## Deckファイルの読み込み・保存
+
+グローバル関数と `app` メソッドの両方で利用できます。
+
+| API | 動作・戻り値 |
+| --- | --- |
+| `openDeck(path)` / `app.openDeck(path)` | 指定Deckを開く。省略時は現在のDeckをディスクから読み直す。未保存の変更は確認せず破棄。戻り値はundefined。 |
+| `saveDeck(path)` / `app.saveDeck(path)` | 指定パスに現在のDeckを保存。省略時は現在のパスへ上書き。指定パスへの保存成功後はそのパスを現在のDeckパスにする。戻り値はundefined。 |
+| `saveAsDeck()` / `app.saveAsDeck()` | Deck用の保存ダイアログを表示して保存。成功でtrue、キャンセルでfalse。成功後は選択したパスを現在のDeckパスにする。 |
+
+```javascript
+saveDeck();                 // 現在のファイルを上書き
+saveDeck("backup.deck");    // 別パスに保存して現在のパスを変更
+openDeck();                 // 未保存の変更を捨てて読み直す
+openDeck("other.deck");     // 保存せずに別Deckを開く
+if (saveAsDeck()) alert(app.getDeckPath());
+```
+
+パスは文字列で、相対パスは起動時のカレントフォルダ基準です。空文字列・nullなどは不正な引数として例外になります。引数省略時に現在のパスがない場合、openDeck／saveDeckは例外になります。新規の未保存DeckはsaveAsDeck、またはパス付きsaveDeckで保存してください。
+
+openDeckは指定ファイルを先に検証し、失敗時は現在のDeckを維持します。読み込み成功後の切り替えはイベント処理終了後に行い、スクリプト環境を作り直します。そのため呼び出したイベントの残りのコードは移動前のDeckを参照します。移動後のopenCardでは新しいDeckになります。
+
+保存は同期処理で、保存成功時に未保存マークを解除します。保存失敗時は現在のパスと未保存状態を維持し、例外になります。saveAsDeckのキャンセルでもパス・状態は変えません。Deck切り替えが保留中の場合は保存を拒否します。読み込み・保存先の親フォルダは自動作成しません。ダイアログは既存ファイルへの上書き確認を表示します。
+
+### 起動引数のDeckが存在しない場合
+
+- Player：エラーを表示し、終了コード1で終了します。
+- `-magic`：指定パスに初期Deckを作成・保存して編集画面を開きます。作成できなければエラー終了します。
+- ファイルが存在するがJSONが壊れている場合：両モードともエラー終了します。上書きしません。
+- Deck引数を省略した場合：従来どおりAppDataのHomeを開き、なければ内蔵Homeを保存して開きます。

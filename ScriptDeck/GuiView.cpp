@@ -32,11 +32,12 @@ GuiView::GuiView(const LaunchOptions& options, GuiServices services)
 {
     const bool useHome=path_.empty();
     if(useHome)path_=EnsureHomeDeck();
-    if (!stack_.Load(path_)) {
-        if (!magic_ || useHome) throw std::runtime_error("Cannot load deck: " + stack_.LastError());
-        status_ = "読み込みエラー: " + stack_.LastError();
-        ++scriptGeneration_;
-    stack_.CreateNew(); path_.clear();
+    path_=std::filesystem::absolute(path_).lexically_normal();
+    if(!std::filesystem::exists(path_) && magic_ && !useHome) {
+        stack_.CreateNew(PathToUtf8(path_.stem()));
+        if(!stack_.Save(path_))throw std::runtime_error("Cannot create deck: "+stack_.LastError());
+    } else if(!stack_.Load(path_)) {
+        throw std::runtime_error("Cannot load deck: "+stack_.LastError());
     }
 }
 bool GuiView::NavigateCard(const std::string& action, const nlohmann::json& target)
@@ -71,7 +72,7 @@ bool GuiView::NavigateCard(const std::string& action, const nlohmann::json& targ
     } else throw std::invalid_argument("Unknown card navigation action.");
     if(stack_.currentCardId==stack_.cards[index].id)return false;
     stack_.currentCardId=stack_.cards[index].id;
-    selected_.clear();buttonEvents_.clear();fileDropEvents_.clear();dirty_ |= magic_;
+    selected_.clear();buttonEvents_.clear();fileDropEvents_.clear();dirty_ = true;
     if(ImGui::GetCurrentContext())ImGui::ClearActiveID();
     return true;
 }
@@ -88,6 +89,21 @@ void GuiView::RequestDeckChange(const std::filesystem::path& path, bool saveCurr
     if(!candidate.Load(destination))throw std::runtime_error("Cannot load deck: "+candidate.LastError());
     if(saveCurrent && path_.empty())throw std::runtime_error("Current deck has no save path; save it first or pass false.");
     pendingDeck_=PendingDeck{std::move(candidate),destination,saveCurrent};
+}
+void GuiView::RequestOpenDeck(const std::filesystem::path& path)
+{
+    const auto source=path.empty()?path_:path;
+    if(source.empty())throw std::runtime_error("Current deck has no file path.");
+    RequestDeckChange(source,false);
+}
+void GuiView::SaveDeck(const std::filesystem::path& path)
+{
+    if(pendingDeck_)throw std::runtime_error("A deck change is already pending.");
+    const auto destination=path.empty()?path_:path;
+    if(destination.empty())throw std::runtime_error("Current deck has no save path; use saveAsDeck().");
+    const auto absolute=std::filesystem::absolute(destination).lexically_normal();
+    if(!stack_.Save(absolute))throw std::runtime_error("Cannot save deck: "+stack_.LastError());
+    path_=absolute;dirty_=false;status_.clear();
 }
 bool GuiView::ApplyPendingDeckChange()
 {
@@ -128,7 +144,7 @@ void GuiView::ChangeChecked(Card& card, const std::string& objectId, bool value)
     std::vector<std::pair<std::string,bool>> before;
     for(const auto& object:card.objects)if(object.type==ObjectType::Checkbox||object.type==ObjectType::RadioButton)before.emplace_back(object.id,object.checked);
     if(!card.SetChecked(objectId,value))return;
-    dirty_ |= magic_;
+    dirty_ = true;
     // 同一グループの解除イベントを先に、操作対象を最後に配送する。
     for(const auto& state:before)if(state.first!=objectId) {
         const auto* object=card.FindObject(state.first);
@@ -169,11 +185,29 @@ void GuiView::SetCardSize(int width, int height)
         throw std::runtime_error("Card size must be between 1 and 8192 pixels.");
     if (stack_.width != width || stack_.height != height) {
         stack_.width = width; stack_.height = height;
-        if (magic_) dirty_ = true;
+        dirty_ = true;
     }
 }
 Card* GuiView::Current() { return stack_.FindCard(stack_.currentCardId); }
-bool GuiView::CanClose() { return !dirty_ || services_.discardChanges(); }
+bool GuiView::CanClose()
+{
+    if(!dirty_)return true;
+    if(magic_)return services_.discardChanges();
+    try {
+        auto destination=path_;
+        if(destination.empty()) {
+            if(!services_.chooseFile)throw std::runtime_error("Current deck has no save path.");
+            destination=services_.chooseFile(true);
+            if(destination.empty())return false;
+        }
+        SaveDeck(destination);
+        return true;
+    } catch(const std::exception& error) {
+        status_="自動保存エラー: "+std::string(error.what());
+        if(services_.reportSaveError)services_.reportSaveError(status_);
+        return false;
+    }
+}
 bool GuiView::Save(bool saveAs)
 {
     auto destination = path_;
@@ -216,14 +250,14 @@ void GuiView::Toolbar()
     if (ImGui::Button("< 前")) {
         for (std::size_t i = 1; i < stack_.cards.size(); ++i)
             if (stack_.cards[i].id == stack_.currentCardId) {
-                stack_.currentCardId = stack_.cards[i-1].id; selected_.clear(); dirty_ |= magic_; break;
+                stack_.currentCardId = stack_.cards[i-1].id; selected_.clear(); dirty_ = true; break;
             }
     }
     ImGui::SameLine();
     if (ImGui::Button("次 >")) {
         for (std::size_t i = 0; i + 1 < stack_.cards.size(); ++i)
             if (stack_.cards[i].id == stack_.currentCardId) {
-                stack_.currentCardId = stack_.cards[i+1].id; selected_.clear(); dirty_ |= magic_; break;
+                stack_.currentCardId = stack_.cards[i+1].id; selected_.clear(); dirty_ = true; break;
             }
     }
     ImGui::Text("%s  |  %s", stack_.name.c_str(), magic_ ? "Magic" : "Player");
@@ -537,7 +571,7 @@ void GuiView::Canvas()
                 const auto id = ImGui::GetID(o.type == ObjectType::Field ? "##field" : "##inputbox");
                 blockKeyboard |= ImGui::GetCurrentContext()->ActiveId == id;
                 if (o.type == ObjectType::Field) {
-                    if (ImGui::InputTextMultiline("##field", &o.text, extent)) dirty_ |= magic_;
+                    if (ImGui::InputTextMultiline("##field", &o.text, extent)) dirty_ = true;
                 } else {
                     // このInputBoxの処理中だけReturnを無視し、フォーカスと選択を維持する。
                     auto* enter = ImGui::GetKeyData(ImGuiKey_Enter);
@@ -547,12 +581,12 @@ void GuiView::Canvas()
                     const float padding = (std::max)(0.0f, (extent.y-ImGui::GetFontSize())/2);
                     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(ImGui::GetStyle().FramePadding.x, padding));
                     ImGui::SetNextItemWidth(extent.x);
-                    if (ImGui::InputText("##inputbox", &o.text)) dirty_ |= magic_;
+                    if (ImGui::InputText("##inputbox", &o.text)) dirty_ = true;
                     ImGui::PopStyleVar(); enter->Down = enterDown; keypad->Down = keypadDown;
                 }
                 blockKeyboard |= ImGui::IsItemActive() || (ImGui::IsItemFocused() && ImGui::GetCurrentContext()->NavCursorVisible);
             } else if (o.type == ObjectType::Listbox || o.type == ObjectType::DropdownList) {
-                auto choose = [&](int index) { o.selectedIndex = index; o.text = o.items[static_cast<std::size_t>(index)]; dirty_ |= magic_; };
+                auto choose = [&](int index) { o.selectedIndex = index; o.text = o.items[static_cast<std::size_t>(index)]; dirty_ = true; };
                 if (o.type == ObjectType::Listbox) {
                     if (ImGui::BeginListBox("##listbox", extent)) {
                         for (std::size_t i = 0; i < o.items.size(); ++i) {

@@ -48,6 +48,7 @@
     <ClInclude Include="$(MSBuildProjectDirectory)\Utf8Path.h" />
     <ClInclude Include="$(MSBuildProjectDirectory)\GuiView.h" />
     <ClInclude Include="$(MSBuildProjectDirectory)\HomeDeck.h" />
+    <ClInclude Include="$(MSBuildProjectDirectory)\TextClipboard.h" />
     <ClInclude Include="$(MSBuildProjectDirectory)\FileAssociation.h" />
     <ClInclude Include="$(MSBuildProjectDirectory)\WindowsAssociation.h" />
     <None Include="$(MSBuildProjectDirectory)\assets\scriptdeck.ico" />

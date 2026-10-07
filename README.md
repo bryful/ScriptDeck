@@ -58,6 +58,8 @@ Deck未指定時は `%LOCALAPPDATA%\ScriptDeck\home.deck` を開きます。フ�
 
 Playerはカードと同じクライアントサイズの固定サイズウィンドウです。Magicではカード・部品・スクリプトを編集して保存できます。「実行プレビュー」で動作を確認し、「Playerモードへ」で通常のPlayerへ切り替えます。
 
+Player終了時は未保存の変更を現在のDeckに自動保存します。保存失敗時は終了せず、内容を保持します。Magic終了時は従来どおり未保存の確認を表示します。
+
 MagicからPlayerへ切り替えても、編集中の内容と未保存状態は保持します。未保存の編集がある場合、Magicのタイトルに `*` が付きます。
 
 ### Playerでスクリプトを直接実行する
@@ -116,6 +118,9 @@ fs.writeText("result.json", JSON.stringify(data, null, 2), true);
 ## カード・Deckの移動
 
 ```javascript
+app.openDeck();                  // 未保存の変更を破棄して再読み込み
+app.saveDeck();                  // 現在のDeckを上書き保存
+app.saveAsDeck();                // 保存ダイアログを表示
 app.nextCard();
 app.prevCard();
 app.topCard();

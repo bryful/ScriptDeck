@@ -10,6 +10,7 @@ struct GuiServices
 {
     std::function<std::filesystem::path(bool)> chooseFile;
     std::function<bool()> discardChanges;
+    std::function<void(const std::string&)> reportSaveError;
     std::function<std::filesystem::path()> chooseImage;
     std::function<ImTextureID(const std::filesystem::path&)> image;
     std::vector<std::pair<std::string, std::string>> imageResources;
@@ -44,6 +45,8 @@ public:
     bool NavigateCard(const std::string& action, const nlohmann::json& target=nullptr);
     void RequestDeckChange(const std::filesystem::path& path, bool saveCurrent=true);
     void RequestHome(bool saveCurrent=true);
+    void RequestOpenDeck(const std::filesystem::path& path={});
+    void SaveDeck(const std::filesystem::path& path={});
     bool HasPendingDeckChange() const { return pendingDeck_.has_value(); }
     bool ApplyPendingDeckChange();
     void CancelPendingDeckChange() { pendingDeck_.reset(); }
@@ -51,7 +54,7 @@ public:
     void SetConsoleMode(bool enabled);
     bool IsMagic() const { return magic_; }
     Stack& MutableDeckData() { return stack_; }
-    void NotifyScriptMutation() { if (magic_) dirty_ = true; }
+    void NotifyScriptMutation() { dirty_ = true; }
     const Stack& DeckData() const { return stack_; }
     unsigned long long ScriptGeneration() const { return scriptGeneration_; }
     bool ScriptsEnabled() const { return !magic_ || test_; }

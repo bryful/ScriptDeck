@@ -6,6 +6,7 @@
 #include <memory>
 #include "ImageResources.h"
 #include "WindowsAssociation.h"
+#include "TextClipboard.h"
 #ifdef _WIN32
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -277,6 +278,9 @@ int RunGui(const LaunchOptions& options)
         GuiServices services;
         services.setConsoleMode = [](bool enabled) { ConsoleMode::Instance().SetEnabled(enabled); };
         services.chooseFile = [&](bool save) { return ChooseFile(hwnd, save); };
+        services.reportSaveError = [&](const std::string& message) {
+            MessageBoxW(hwnd,PathFromUtf8(message).c_str(),L"ScriptDeck - 保存エラー",MB_OK|MB_ICONERROR);
+        };
         services.chooseImage = [&] { return ChooseFile(hwnd, false, true); };
         services.discardChanges = [&] {
             return MessageBoxW(hwnd, L"未保存の変更があります。変更を破棄して続行しますか？",
@@ -296,7 +300,23 @@ int RunGui(const LaunchOptions& options)
         scriptHost.navigateCard = [&](const std::string& action,const nlohmann::json& target) {return view.NavigateCard(action,target);};
         scriptHost.changeDeck = [&](const std::filesystem::path& path,bool save) {view.RequestDeckChange(path,save);};
         scriptHost.goHome = [&](bool save) {view.RequestHome(save);};
+        scriptHost.openDeck = [&](const std::filesystem::path& path) {view.RequestOpenDeck(path);};
+        scriptHost.saveDeck = [&](const std::filesystem::path& path) {view.SaveDeck(path);};
+        scriptHost.saveAsDeck = [&] {
+            if(view.HasPendingDeckChange())throw std::runtime_error("A deck change is already pending.");
+            FileDialogOptions settings;
+            settings.title="Deckを別名で保存";
+            settings.defaultExtension="deck";
+            settings.defaultName=view.DeckPath().empty()?"Untitled.deck":PathToUtf8(view.DeckPath().filename());
+            settings.initialDirectory=view.DeckPath().empty()?scriptWorkingDirectory:view.DeckPath().parent_path();
+            settings.filters={{"ScriptDeck","*.deck"},{"すべて","*.*"}};
+            const auto destination=ShowSaveFileDialog(hwnd,settings);
+            if(!destination)return false;
+            view.SaveDeck(*destination);return true;
+        };
         scriptHost.getDeckPath = [&] {return view.DeckPath();};
+        scriptHost.readClipboard = [&] {return TextClipboard::Read(hwnd);};
+        scriptHost.writeClipboard = [&](const std::string& text) {TextClipboard::Write(hwnd,text);};
         scriptHost.setTopMost = [&](bool enabled) {
             if(!SetWindowPos(hwnd,enabled?HWND_TOPMOST:HWND_NOTOPMOST,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE))
                 throw std::runtime_error("Cannot update TopMost state.");
@@ -573,7 +593,7 @@ int RunGui(const LaunchOptions& options)
         saveMagic();
         savePlayer();
     } catch (const std::exception& e) {
-        MessageBoxA(hwnd, e.what(), "ScriptDeck error", MB_OK | MB_ICONERROR); result = 1;
+        MessageBoxW(hwnd, PathFromUtf8(e.what()).c_str(), L"ScriptDeck error", MB_OK | MB_ICONERROR); result = 1;
     }
     PlaySoundW(nullptr, nullptr, 0);
     std::fflush(nullptr);

@@ -103,11 +103,11 @@ struct ScriptEngine::Impl
     }
     enum Operation {
         GetHomePath, GetDeckPath, GetExePath, GetDocumentPath, GetTempPath, GetAppDataPath,
-        GetArgs, Write, WriteLine, WriteError, ReadBytes, WriteBytes, ReadBinary, WriteBinary, Flush,
+        ReadClipboard, WriteClipboard, GetArgs, Write, WriteLine, WriteError, ReadBytes, WriteBytes, ReadBinary, WriteBinary, Flush,
         OpenDialog, SaveDialog, Console, Magic, BeepOp, PlayWav, StopWav, Exit,
         ReadText, FileWriteText, AppendText, FileReadBytes, FileWriteBytes, Exists, ExistsFile, ExistsDir,
         ResolvePath, GetFiles, GetDirectories, Move, Rename, Delete,
-        GetName, GetNameWithoutExt, GetExt, GetParent, GetFrame, GetNameWithoutFrame, ToWindowsPath, ToUnixPath, NextCard, PrevCard, TopCard, EndCard, GoCardIndex, GoCard, GoHome, ChangeDeck, Install, Uninstall, SetTopMost, GetTopMost, WindowFront
+        GetName, GetNameWithoutExt, GetExt, GetParent, GetFrame, GetNameWithoutFrame, ToWindowsPath, ToUnixPath, NextCard, PrevCard, TopCard, EndCard, GoCardIndex, GoCard, GoHome, ChangeDeck, OpenDeck, SaveDeck, SaveAsDeck, Install, Uninstall, SetTopMost, GetTopMost, WindowFront
     };
     static JSValue Argument(int argc, JSValueConst* argv, int index) { return index < argc ? argv[index] : JS_UNDEFINED; }
     static std::string Text(JSContext* ctx, JSValueConst value)
@@ -204,6 +204,18 @@ struct ScriptEngine::Impl
                 } else path=SystemPath(operation);
                 const auto text=path.empty()?std::string{}:PathToUtf8(std::filesystem::absolute(path).lexically_normal());
                 result=JS_NewStringLen(ctx,text.data(),text.size());break;
+            }
+            case ReadClipboard: {
+                if(!self.host.readClipboard)throw std::runtime_error("Clipboard service is unavailable.");
+                const auto text=self.host.readClipboard();
+                result=JS_NewStringLen(ctx,text.data(),text.size());break;
+            }
+            case WriteClipboard: {
+                const auto text=Text(ctx,a);
+                if(text.find('\0')!=std::string::npos)throw std::invalid_argument("Clipboard text cannot contain NUL.");
+                if(text.size()>ScriptFiles::MaxReadSize)throw std::invalid_argument("Clipboard text exceeds 32 MiB.");
+                if(!self.host.writeClipboard)throw std::runtime_error("Clipboard service is unavailable.");
+                self.host.writeClipboard(text);break;
             }
             case GetArgs: {
                 result=JS_NewArray(ctx);if(JS_IsException(result))return result;
@@ -356,6 +368,16 @@ struct ScriptEngine::Impl
             case ChangeDeck:
                 if(!self.host.changeDeck)throw std::runtime_error("Deck navigation service is unavailable.");
                 self.host.changeDeck(self.files.Resolve(Text(ctx,a)),Boolean(b,true));break;
+            case OpenDeck: case SaveDeck: {
+                const auto path=JS_IsUndefined(a)?std::filesystem::path{}:self.files.Resolve(Text(ctx,a));
+                if(!JS_IsUndefined(a) && Text(ctx,a).empty())throw std::invalid_argument("Deck path is empty.");
+                const auto& callback=operation==OpenDeck?self.host.openDeck:self.host.saveDeck;
+                if(!callback)throw std::runtime_error("Deck file service is unavailable.");
+                callback(path);break;
+            }
+            case SaveAsDeck:
+                if(!self.host.saveAsDeck)throw std::runtime_error("Deck save dialog service is unavailable.");
+                result=JS_NewBool(ctx,self.host.saveAsDeck());break;
             case Install: case Uninstall: {
                 const auto& callback=operation==Install?self.host.install:self.host.uninstall;
                 if(!callback)throw std::runtime_error("File association service is unavailable.");
@@ -386,10 +408,10 @@ struct ScriptEngine::Impl
     void RegisterBuiltins()
     {
         struct Entry{const char* name;int operation;int length;};
-        const Entry apps[]={ {"getHomePath",GetHomePath,0},{"getDeckPath",GetDeckPath,0},{"getExePath",GetExePath,0},
+        const Entry apps[]={ {"readClipboard",ReadClipboard,0},{"writeClipboard",WriteClipboard,1},{"getHomePath",GetHomePath,0},{"getDeckPath",GetDeckPath,0},{"getExePath",GetExePath,0},
             {"getDocumentPath",GetDocumentPath,0},{"getDocumentsPath",GetDocumentPath,0},{"getTempPath",GetTempPath,0},{"getAppDataPath",GetAppDataPath,0},{"getArgs",GetArgs,0},{"openFileDialog",OpenDialog,0},{"saveFileDialog",SaveDialog,0},{"write",Write,1},{"writeLine",WriteLine,1},{"writeError",WriteError,1},
             {"readBytes",ReadBytes,1},{"writeBytes",WriteBytes,1},{"readBinary",ReadBinary,0},{"writeBinary",WriteBinary,1},
-            {"install",Install,0},{"uninstall",Uninstall,0},{"goHome",GoHome,0},{"nextCard",NextCard,0},{"prevCard",PrevCard,0},{"topCard",TopCard,0},{"endCard",EndCard,0},{"goCardIndex",GoCardIndex,1},{"goCard",GoCard,1},{"changeDeck",ChangeDeck,1},{"setTopMost",SetTopMost,1},{"getTopMost",GetTopMost,0},{"windowFront",WindowFront,0},{"flush",Flush,0},{"setConsoleMode",Console,1},{"setMagic",Magic,1},{"beep",BeepOp,0},{"playWav",PlayWav,1},{"stopWav",StopWav,0},{"exit",Exit,0}};
+            {"install",Install,0},{"uninstall",Uninstall,0},{"goHome",GoHome,0},{"nextCard",NextCard,0},{"prevCard",PrevCard,0},{"topCard",TopCard,0},{"endCard",EndCard,0},{"goCardIndex",GoCardIndex,1},{"goCard",GoCard,1},{"changeDeck",ChangeDeck,1},{"openDeck",OpenDeck,0},{"saveDeck",SaveDeck,0},{"saveAsDeck",SaveAsDeck,0},{"setTopMost",SetTopMost,1},{"getTopMost",GetTopMost,0},{"windowFront",WindowFront,0},{"flush",Flush,0},{"setConsoleMode",Console,1},{"setMagic",Magic,1},{"beep",BeepOp,0},{"playWav",PlayWav,1},{"stopWav",StopWav,0},{"exit",Exit,0}};
         const Entry fs[]={ {"readText",ReadText,1},{"writeText",FileWriteText,2},{"appendText",AppendText,2},{"readBytes",FileReadBytes,1},{"writeBytes",FileWriteBytes,2},
             {"exists",Exists,1},{"existsFile",ExistsFile,1},{"existsDir",ExistsDir,1},{"resolvePath",ResolvePath,1},
             {"toWindowsPath",ToWindowsPath,1},{"toUnixPath",ToUnixPath,1},{"getName",GetName,1},{"getNameWithoutExt",GetNameWithoutExt,1},{"getExt",GetExt,1},{"getParent",GetParent,1},{"getFrame",GetFrame,1},{"getNameWithoutFrame",GetNameWithoutFrame,1},{"getFiles",GetFiles,1},{"getDirectories",GetDirectories,1},{"move",Move,2},{"rename",Rename,2},{"delete",Delete,1}};
