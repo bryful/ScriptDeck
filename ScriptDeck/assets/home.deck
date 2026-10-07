@@ -1,0 +1,40 @@
+{
+  "format": "ScriptDeck",
+  "version": 1,
+  "name": "Home",
+  "width": 640,
+  "height": 480,
+  "script": "",
+  "startupPlacement": "previous_center",
+  "currentCardId": "home",
+  "cards": [
+    {
+      "id": "home",
+      "name": "Home",
+      "script": "",
+      "objects": [
+        {
+          "id": "title",
+          "type": "text",
+          "name": "title",
+          "text": "ScriptDeck Home",
+          "x": 32,
+          "y": 32,
+          "width": 560,
+          "height": 40
+        },
+        {
+          "id": "open",
+          "type": "button",
+          "name": "open",
+          "text": "Open Deck",
+          "x": 32,
+          "y": 100,
+          "width": 180,
+          "height": 36,
+          "script": "function mouseUp() { const path = app.openFileDialog({title: \"Open Deck\", filters: [{name: \"ScriptDeck\", pattern: \"*.deck\"}]}); if (path !== null) app.changeDeck(path); }"
+        }
+      ]
+    }
+  ]
+}
