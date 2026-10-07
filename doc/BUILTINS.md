@@ -140,3 +140,31 @@ toUnixPath("C:\\work\\aaa\\bbb");  // "/c/work/aaa/bbb"
 カード移動・Deck切り替え・Home起動については [NAVIGATION_API.md](NAVIGATION_API.md) を参照してください。
 
 Version 1.0のPlayerスクリプト入力、アイコン、`app.install()` / `app.uninstall()` は [VERSION1.md](VERSION1.md) を参照してください。
+
+## アプリケーション・フォルダのフルパス
+
+すべて引数なしで、フルパスの文字列を返します。フォルダパスには通常、末尾の区切り文字を付けません（ドライブのルートを除く）。取得だけではファイル・フォルダを作成しません。
+
+| API | 戻り値 |
+| --- | --- |
+| `app.getHomePath()` | Homeとして使用する `home.deck` のフルパス。 |
+| `app.getDeckPath()` | 現在開いているDeckのフルパス。未保存の新規Deckなら空文字列。 |
+| `app.getExePath()` | 実行中の `ScriptDeck.exe` のフルパス。 |
+| `app.getDocumentPath()` | WindowsのDocumentsの設定先。OneDriveなどへの移動にも対応。 |
+| `app.getDocumentsPath()` | `app.getDocumentPath()` の別名。 |
+| `app.getTempPath()` | 現在のプロセスが使用する一時フォルダ。 |
+| `app.getAppDataPath()` | ScriptDeck用の設定フォルダ。通常は `C:\Users\ユーザー名\AppData\Local\ScriptDeck`。 |
+
+```javascript
+alert({
+    home: app.getHomePath(),
+    deck: app.getDeckPath(),
+    exe: app.getExePath(),
+    documents: app.getDocumentPath(),
+    temp: app.getTempPath(),
+    appData: app.getAppDataPath()
+});
+const deckFolder = fs.getParent(app.getDeckPath());
+```
+
+`getDeckPath()` は呼び出した時点のDeckを返します。`changeDeck()`／`goHome()` はイベント処理後に反映されるため、その呼び出し直後の同じイベント内では移動前のパスです。移動先の `openCard` では移動先のパスを返します。PlayerとMagicの実行プレビューで利用できます。

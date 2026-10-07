@@ -4,6 +4,7 @@
 #include <stdexcept>
 #include <utility>
 #include "Utf8Path.h"
+#include "HomeDeck.h"
 #include <cmath>
 #include <cstdio>
 #include <algorithm>
@@ -68,7 +69,40 @@ struct ScriptEngine::Impl
         catch (const std::exception& e) { return JS_ThrowInternalError(ctx, "%s", e.what()); }
         catch (...) { return JS_ThrowInternalError(ctx, "Alert failed."); }
     }
+    static std::filesystem::path SystemPath(int operation)
+    {
+        if(operation==GetHomePath)return HomeDeckPath();
+        if(operation==GetAppDataPath)return HomeDeckPath().parent_path();
+        if(operation==GetTempPath)return std::filesystem::temp_directory_path();
+#ifdef _WIN32
+        if(operation==GetDocumentPath) {
+            PWSTR directory=nullptr;
+            const auto status=SHGetKnownFolderPath(FOLDERID_Documents,0,nullptr,&directory);
+            if(FAILED(status)){CoTaskMemFree(directory);throw std::runtime_error("Cannot locate Documents.");}
+            std::filesystem::path result;
+            try {result=std::filesystem::path(directory);}
+            catch(...){CoTaskMemFree(directory);throw;}
+            CoTaskMemFree(directory);return result;
+        }
+        std::wstring buffer(512,L'\0');
+        for(;;) {
+            const auto length=GetModuleFileNameW(nullptr,buffer.data(),static_cast<DWORD>(buffer.size()));
+            if(!length)throw std::runtime_error("Cannot locate executable.");
+            if(length<buffer.size())return std::filesystem::path(buffer.substr(0,length));
+            if(buffer.size()>=32768)throw std::runtime_error("Executable path is too long.");
+            buffer.resize((std::min)(buffer.size()*2,std::size_t(32768)));
+        }
+#else
+        if(operation==GetDocumentPath) {
+            if(const char* home=std::getenv("HOME"))if(*home)return PathFromUtf8(home)/"Documents";
+            throw std::runtime_error("Cannot locate Documents.");
+        }
+        // Linux is the supported non-Windows build/test host.
+        return std::filesystem::read_symlink("/proc/self/exe");
+#endif
+    }
     enum Operation {
+        GetHomePath, GetDeckPath, GetExePath, GetDocumentPath, GetTempPath, GetAppDataPath,
         GetArgs, Write, WriteLine, WriteError, ReadBytes, WriteBytes, ReadBinary, WriteBinary, Flush,
         OpenDialog, SaveDialog, Console, Magic, BeepOp, PlayWav, StopWav, Exit,
         ReadText, FileWriteText, AppendText, FileReadBytes, FileWriteBytes, Exists, ExistsFile, ExistsDir,
@@ -162,6 +196,15 @@ struct ScriptEngine::Impl
         try {
             JSValue result=JS_UNDEFINED;
             switch(operation) {
+            case GetHomePath: case GetDeckPath: case GetExePath: case GetDocumentPath: case GetTempPath: case GetAppDataPath: {
+                std::filesystem::path path;
+                if(operation==GetDeckPath) {
+                    if(!self.host.getDeckPath)throw std::runtime_error("Deck path service is unavailable.");
+                    path=self.host.getDeckPath();
+                } else path=SystemPath(operation);
+                const auto text=path.empty()?std::string{}:PathToUtf8(std::filesystem::absolute(path).lexically_normal());
+                result=JS_NewStringLen(ctx,text.data(),text.size());break;
+            }
             case GetArgs: {
                 result=JS_NewArray(ctx);if(JS_IsException(result))return result;
                 for(std::size_t i=0;i<self.host.args.size();++i)
@@ -343,7 +386,8 @@ struct ScriptEngine::Impl
     void RegisterBuiltins()
     {
         struct Entry{const char* name;int operation;int length;};
-        const Entry apps[]={ {"getArgs",GetArgs,0},{"openFileDialog",OpenDialog,0},{"saveFileDialog",SaveDialog,0},{"write",Write,1},{"writeLine",WriteLine,1},{"writeError",WriteError,1},
+        const Entry apps[]={ {"getHomePath",GetHomePath,0},{"getDeckPath",GetDeckPath,0},{"getExePath",GetExePath,0},
+            {"getDocumentPath",GetDocumentPath,0},{"getDocumentsPath",GetDocumentPath,0},{"getTempPath",GetTempPath,0},{"getAppDataPath",GetAppDataPath,0},{"getArgs",GetArgs,0},{"openFileDialog",OpenDialog,0},{"saveFileDialog",SaveDialog,0},{"write",Write,1},{"writeLine",WriteLine,1},{"writeError",WriteError,1},
             {"readBytes",ReadBytes,1},{"writeBytes",WriteBytes,1},{"readBinary",ReadBinary,0},{"writeBinary",WriteBinary,1},
             {"install",Install,0},{"uninstall",Uninstall,0},{"goHome",GoHome,0},{"nextCard",NextCard,0},{"prevCard",PrevCard,0},{"topCard",TopCard,0},{"endCard",EndCard,0},{"goCardIndex",GoCardIndex,1},{"goCard",GoCard,1},{"changeDeck",ChangeDeck,1},{"setTopMost",SetTopMost,1},{"getTopMost",GetTopMost,0},{"windowFront",WindowFront,0},{"flush",Flush,0},{"setConsoleMode",Console,1},{"setMagic",Magic,1},{"beep",BeepOp,0},{"playWav",PlayWav,1},{"stopWav",StopWav,0},{"exit",Exit,0}};
         const Entry fs[]={ {"readText",ReadText,1},{"writeText",FileWriteText,2},{"appendText",AppendText,2},{"readBytes",FileReadBytes,1},{"writeBytes",FileWriteBytes,2},

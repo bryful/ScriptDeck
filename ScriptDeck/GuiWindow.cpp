@@ -296,6 +296,7 @@ int RunGui(const LaunchOptions& options)
         scriptHost.navigateCard = [&](const std::string& action,const nlohmann::json& target) {return view.NavigateCard(action,target);};
         scriptHost.changeDeck = [&](const std::filesystem::path& path,bool save) {view.RequestDeckChange(path,save);};
         scriptHost.goHome = [&](bool save) {view.RequestHome(save);};
+        scriptHost.getDeckPath = [&] {return view.DeckPath();};
         scriptHost.setTopMost = [&](bool enabled) {
             if(!SetWindowPos(hwnd,enabled?HWND_TOPMOST:HWND_NOTOPMOST,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE))
                 throw std::runtime_error("Cannot update TopMost state.");

@@ -16,6 +16,7 @@ struct ScriptHost
     std::function<bool(const std::string&,const nlohmann::json&)> navigateCard;
     std::function<void(const std::filesystem::path&,bool)> changeDeck;
     std::function<void(bool)> goHome;
+    std::function<std::filesystem::path()> getDeckPath;
     std::function<bool()> install;
     std::function<bool()> uninstall;
     std::function<void(bool)> setTopMost;
