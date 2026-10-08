@@ -105,7 +105,7 @@ struct ScriptEngine::Impl
     enum Operation {
         GetHomePath, GetDeckPath, GetExePath, GetDocumentPath, GetTempPath, GetAppDataPath,
         GetEnv, LaunchProcess, RunProcess, GetFileSize, GetFileTimes, GetFileInfo, GetFileTimestamp, ReadClipboard, WriteClipboard, GetArgs, Write, WriteLine, WriteError, ReadBytes, WriteBytes, ReadBinary, WriteBinary, Flush,
-        OpenDialog, SaveDialog, Console, Magic, BeepOp, PlayWav, StopWav, Exit,
+        OpenDialog, SaveDialog, FolderDialog, Console, Magic, BeepOp, PlayWav, StopWav, Exit,
         ReadText, FileWriteText, AppendText, FileReadBytes, FileWriteBytes, Exists, ExistsFile, ExistsDir,
         ResolvePath, GetFiles, GetDirectories, Move, Rename, Delete,
         GetName, GetNameWithoutExt, GetExt, GetParent, GetFrame, GetNameWithoutFrame, ToWindowsPath, ToUnixPath, NextCard, PrevCard, TopCard, EndCard, GoCardIndex, GoCard, GoHome, ChangeDeck, NewDeck, OpenDeck, SaveDeck, SaveAsDeck, Install, Uninstall, SetTopMost, GetTopMost, WindowFront
@@ -253,7 +253,7 @@ struct ScriptEngine::Impl
                     if(JS_SetPropertyUint32(ctx,result,static_cast<uint32_t>(i),JS_NewStringLen(ctx,self.host.args[i].data(),self.host.args[i].size()))<0){JS_FreeValue(ctx,result);return JS_EXCEPTION;}
                 break;
             }
-            case OpenDialog: case SaveDialog: {
+            case OpenDialog: case SaveDialog: case FolderDialog: {
                 JSValue encoded=JS_UNDEFINED;
                 nlohmann::json raw=nlohmann::json::object();
                 if(!JS_IsUndefined(a)) {
@@ -263,8 +263,13 @@ struct ScriptEngine::Impl
                     try {raw=nlohmann::json::parse(Text(ctx,encoded));JS_FreeValue(ctx,encoded);}
                     catch(...) {JS_FreeValue(ctx,encoded);throw;}
                 }
-                const auto options=ParseFileDialogOptions(raw,operation==SaveDialog,self.files);
-                if(operation==OpenDialog) {
+                const auto options=operation==FolderDialog?ParseFolderDialogOptions(raw,self.files):ParseFileDialogOptions(raw,operation==SaveDialog,self.files);
+                if(operation==FolderDialog) {
+                    if(!self.host.selectFolderDialog)throw std::runtime_error("FolderDialog service is unavailable.");
+                    const auto selected=self.host.selectFolderDialog(options);
+                    if(!selected)result=JS_NULL;
+                    else {const auto path=PathToUtf8(*selected);result=JS_NewStringLen(ctx,path.data(),path.size());}
+                } else if(operation==OpenDialog) {
                     if(!self.host.openFileDialog)throw std::runtime_error("OpenFileDialog service is unavailable.");
                     const auto paths=self.host.openFileDialog(options);
                     if(paths.empty())result=JS_NULL;
@@ -442,7 +447,7 @@ struct ScriptEngine::Impl
     {
         struct Entry{const char* name;int operation;int length;};
         const Entry apps[]={ {"getEnv",GetEnv,1},{"launchProcess",LaunchProcess,1},{"runProcess",RunProcess,1},{"readClipboard",ReadClipboard,0},{"writeClipboard",WriteClipboard,1},{"getHomePath",GetHomePath,0},{"getDeckPath",GetDeckPath,0},{"getExePath",GetExePath,0},
-            {"getDocumentPath",GetDocumentPath,0},{"getDocumentsPath",GetDocumentPath,0},{"getTempPath",GetTempPath,0},{"getAppDataPath",GetAppDataPath,0},{"getArgs",GetArgs,0},{"openFileDialog",OpenDialog,0},{"saveFileDialog",SaveDialog,0},{"write",Write,1},{"writeLine",WriteLine,1},{"writeError",WriteError,1},
+            {"getDocumentPath",GetDocumentPath,0},{"getDocumentsPath",GetDocumentPath,0},{"getTempPath",GetTempPath,0},{"getAppDataPath",GetAppDataPath,0},{"getArgs",GetArgs,0},{"openFileDialog",OpenDialog,0},{"saveFileDialog",SaveDialog,0},{"selectFolderDialog",FolderDialog,0},{"write",Write,1},{"writeLine",WriteLine,1},{"writeError",WriteError,1},
             {"readBytes",ReadBytes,1},{"writeBytes",WriteBytes,1},{"readBinary",ReadBinary,0},{"writeBinary",WriteBinary,1},
             {"install",Install,0},{"uninstall",Uninstall,0},{"goHome",GoHome,0},{"nextCard",NextCard,0},{"prevCard",PrevCard,0},{"topCard",TopCard,0},{"endCard",EndCard,0},{"goCardIndex",GoCardIndex,1},{"goCard",GoCard,1},{"changeDeck",ChangeDeck,1},{"newDeck",NewDeck,0},{"openDeck",OpenDeck,0},{"saveDeck",SaveDeck,0},{"saveAsDeck",SaveAsDeck,0},{"setTopMost",SetTopMost,1},{"getTopMost",GetTopMost,0},{"windowFront",WindowFront,0},{"flush",Flush,0},{"setConsoleMode",Console,1},{"setMagic",Magic,1},{"beep",BeepOp,0},{"playWav",PlayWav,1},{"stopWav",StopWav,0},{"exit",Exit,0}};
         const Entry fs[]={ {"getFileSize",GetFileSize,1},{"getFileTimes",GetFileTimes,1},{"getFileInfo",GetFileInfo,1},{"getFileTimestamp",GetFileTimestamp,1},{"readText",ReadText,1},{"writeText",FileWriteText,2},{"appendText",AppendText,2},{"readBytes",FileReadBytes,1},{"writeBytes",FileWriteBytes,2},

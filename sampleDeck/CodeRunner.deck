@@ -71,7 +71,7 @@
           "resourceId": "",
           "script": "//この部品には専用イベントはありません。\n",
           "selectedIndex": -1,
-          "text": "// JavaScriptコードを入力してrunボタンで実行します。\napp.writeLine(\"Hellow\");\n\nfor(var i=0; i<10;i++)\n{\n    app.writeLine(i+\"\");\n}\n\nalert(\"Hello, ScriptDeck!\");\n",
+          "text": "// JavaScriptコードを入力してrunボタンで実行します。\napp.writeLine(\"Hellow\");\n\nfor(var i=0; i<10;i++)\n{\n    app.writeLine(i+\"\");\n}\n\nvar p = app.getEnv(\"PATH\");\n\nvar pa = p.split(\";\");\n\nvar ret =\"\";\nfor (var i =0; i<pa.length;i++)\n{\n\tret += pa[i] +\"\\r\\n\";\n}\n\napp.writeLine(ret);\n\nconst folder = app.selectFolderDialog({\n    title: \"フォルダを選択\",\n    initialDirectory: app.getDocumentPath()\n});\n\nif (folder !== null) {\n    alert(folder);\n}\n",
           "textColor": [
             1.0,
             1.0,

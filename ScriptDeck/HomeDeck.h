@@ -34,7 +34,7 @@ inline std::string EmbeddedHomeDeck()
 {
 #ifdef _WIN32
     const auto module=GetModuleHandleW(nullptr);
-    const auto resource=FindResourceW(module,MAKEINTRESOURCEW(IDR_SCRIPTDECK_HOME),RT_RCDATA);
+    const auto resource=FindResourceW(module,MAKEINTRESOURCEW(IDR_SCRIPTDECK_HOME),MAKEINTRESOURCEW(10));
     if(!resource)throw std::runtime_error("Embedded home.deck resource was not found.");
     const auto data=LoadResource(module,resource);
     const auto bytes=static_cast<const char*>(LockResource(data));

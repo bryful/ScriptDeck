@@ -305,6 +305,7 @@ int RunGui(const LaunchOptions& options)
         // スクリプトAPIをGUIのネイティブサービスへ接続する。
         ScriptHost scriptHost;
         scriptHost.openFileDialog = [&](const FileDialogOptions& settings) {return ShowOpenFileDialog(hwnd,settings);};
+        scriptHost.selectFolderDialog = [&](const FileDialogOptions& settings) {return ShowFolderDialog(hwnd,settings);};
         scriptHost.saveFileDialog = [&](const FileDialogOptions& settings) {return ShowSaveFileDialog(hwnd,settings);};
         scriptHost.install = [] {return DeckAssociation::InstallCurrentApplication();};
         scriptHost.uninstall = [] {return DeckAssociation::UninstallCurrentApplication();};

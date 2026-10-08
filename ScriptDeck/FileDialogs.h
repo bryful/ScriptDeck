@@ -13,7 +13,9 @@ struct FileDialogOptions {
     bool multiple = false;
 };
 FileDialogOptions ParseFileDialogOptions(const nlohmann::json& value, bool save, const ScriptFiles& files);
+FileDialogOptions ParseFolderDialogOptions(const nlohmann::json& value, const ScriptFiles& files);
 #ifdef _WIN32
 std::vector<std::filesystem::path> ShowOpenFileDialog(void* owner, const FileDialogOptions& options);
+std::optional<std::filesystem::path> ShowFolderDialog(void* owner, const FileDialogOptions& options);
 std::optional<std::filesystem::path> ShowSaveFileDialog(void* owner, const FileDialogOptions& options);
 #endif

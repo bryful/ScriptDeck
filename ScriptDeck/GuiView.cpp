@@ -756,6 +756,7 @@ void GuiView::DrawScriptEditor()
     bool save=ImGui::Button("保存");
     ImGui::SameLine();bool saveAs=ImGui::Button("別名保存");
     ImGui::SameLine();ImGui::TextUnformatted(scriptEditorTitle_.c_str());
+    if (!status_.empty()) ImGui::TextWrapped("%s", status_.c_str());
     ImGui::Separator();
     if(services_.scriptFont)ImGui::PushFont(services_.scriptFont);
     if(scriptEditorFocus_) {

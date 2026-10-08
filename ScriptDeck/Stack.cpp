@@ -307,8 +307,11 @@ bool Stack::Save(const std::filesystem::path& path)
         // 同じフォルダに一時ファイルを作り、書き込み成功後に置換する。
         // 同時に同一ファイルを保存する用途はこの雛形では扱わない。
         temp = path; temp += ".tmp";
-        if (std::filesystem::exists(temp))
-            throw std::runtime_error("Temporary file already exists; check the .tmp file.");
+        // 復旧用の一時ファイルを保持し、再試行には未使用の名前を使う。
+        for (std::uint64_t attempt = 1; std::filesystem::exists(temp); ++attempt) {
+            temp = path;
+            temp += ".tmp." + std::to_string(attempt);
+        }
         {
             std::ofstream f(temp, std::ios::binary | std::ios::trunc);
             if (!f) { temp.clear(); throw std::runtime_error("Cannot create temporary file."); }

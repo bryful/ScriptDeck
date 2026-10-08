@@ -45,6 +45,13 @@ FileDialogOptions ParseFileDialogOptions(const nlohmann::json& value,bool save,c
     if(result.filters.empty())result.filters.push_back({"All files (*.*)","*.*"});
     return result;
 }
+FileDialogOptions ParseFolderDialogOptions(const nlohmann::json& value,const ScriptFiles& files) {
+    if(!value.is_object())throw std::invalid_argument("Folder dialog options must be an object.");
+    for(auto option=value.begin();option!=value.end();++option)
+        if(option.key()!="title" && option.key()!="initialDirectory")
+            throw std::invalid_argument("Unknown folder dialog option: "+option.key());
+    return ParseFileDialogOptions(value,false,files);
+}
 #ifdef _WIN32
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -100,6 +107,28 @@ std::optional<std::filesystem::path> ShowSaveFileDialog(void* owner,const FileDi
     Configure(dialog.Get(),options,true);const auto result=dialog->Show(static_cast<HWND>(owner));
     if(result==HRESULT_FROM_WIN32(ERROR_CANCELLED))return std::nullopt;
     Require(result,"SaveFileDialog failed");ComPtr<IShellItem> item;Require(dialog->GetResult(item.GetAddressOf()),"Cannot get save path");
+    return ItemPath(item.Get());
+}
+std::optional<std::filesystem::path> ShowFolderDialog(void* owner,const FileDialogOptions& options) {
+    ComPtr<IFileOpenDialog> dialog;
+    Require(CoCreateInstance(__uuidof(FileOpenDialog),nullptr,CLSCTX_INPROC_SERVER,IID_PPV_ARGS(dialog.GetAddressOf())),"Cannot create FolderDialog");
+    FILEOPENDIALOGOPTIONS flags{};
+    Require(dialog->GetOptions(&flags),"Cannot get folder dialog options");
+    flags|=FOS_PICKFOLDERS|FOS_FORCEFILESYSTEM|FOS_NOCHANGEDIR|FOS_PATHMUSTEXIST;
+    flags&=~FOS_ALLOWMULTISELECT;
+    Require(dialog->SetOptions(flags),"Cannot set folder dialog options");
+    if(!options.title.empty())Require(dialog->SetTitle(PathFromUtf8(options.title).c_str()),"Cannot set folder dialog title");
+    if(!options.initialDirectory.empty()) {
+        if(!std::filesystem::is_directory(options.initialDirectory))throw std::invalid_argument("initialDirectory must be an existing directory.");
+        ComPtr<IShellItem> folder;
+        Require(SHCreateItemFromParsingName(options.initialDirectory.c_str(),nullptr,IID_PPV_ARGS(folder.GetAddressOf())),"Cannot resolve initial directory");
+        Require(dialog->SetFolder(folder.Get()),"Cannot set initial directory");
+    }
+    const auto result=dialog->Show(static_cast<HWND>(owner));
+    if(result==HRESULT_FROM_WIN32(ERROR_CANCELLED))return std::nullopt;
+    Require(result,"FolderDialog failed");
+    ComPtr<IShellItem> item;
+    Require(dialog->GetResult(item.GetAddressOf()),"Cannot get selected folder");
     return ItemPath(item.Get());
 }
 #endif

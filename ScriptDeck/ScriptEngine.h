@@ -11,6 +11,7 @@ struct ScriptHost
     std::shared_ptr<ScriptModel> model;
     std::function<std::vector<std::filesystem::path>(const FileDialogOptions&)> openFileDialog;
     std::function<std::optional<std::filesystem::path>(const FileDialogOptions&)> saveFileDialog;
+    std::function<std::optional<std::filesystem::path>(const FileDialogOptions&)> selectFolderDialog;
     std::vector<std::string> args;
     std::filesystem::path workingDirectory;
     std::function<bool(const std::string&,const nlohmann::json&)> navigateCard;
