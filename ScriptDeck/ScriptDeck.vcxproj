@@ -59,6 +59,7 @@
     <ClInclude Include="$(MSBuildProjectDirectory)\ScriptEngine.h" />
     <ClInclude Include="$(MSBuildProjectDirectory)\ScriptModel.h" />
     <ClInclude Include="$(MSBuildProjectDirectory)\ScriptIO.h" />
+    <ClInclude Include="$(MSBuildProjectDirectory)\ScriptSystem.h" />
     <ClInclude Include="$(MSBuildProjectDirectory)\FileDialogs.h" />
     <ClInclude Include="$(MSBuildProjectDirectory)\ConsoleMode.h" />
   </ItemGroup>

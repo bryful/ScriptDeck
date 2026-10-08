@@ -1,5 +1,7 @@
 # ScriptDeck
 
+更新日：2026-10-08
+
 ![ScriptDeck icon](ScriptDeck/assets/scriptdeck.png)
 
 **ScriptDeck** は、HyperCardに着想を得たWindows向けのカード型アプリケーション作成ツールです。カードにボタン・入力欄・画像などを配置し、JavaScriptで動作を記述できます。
@@ -9,6 +11,7 @@
 ## 主な機能
 
 - カードと部品の作成・編集、並べ替え、色の指定。
+- Magicで作業領域全体を使うスクリプト編集画面。Tab入力・Ctrl+S保存に対応。
 - Button、Field、Text、Image、Listbox、DropdownList、InputBox、Checkbox、RadioButton。
 - JavaScriptから部品のプロパティ操作、動的な作成・削除、カード・Deckの移動。
 - 外部画像と内蔵画像リソースの表示。
@@ -16,6 +19,8 @@
 - ファイル選択・保存ダイアログ、テキスト／バイナリーファイル操作。
 - UTF-8のBOM付き／なしの読み書き、標準入出力、起動引数の取得。
 - Beep・WAV再生、コンソール表示、ウィンドウの最前面制御。
+- 環境変数、ファイルサイズ・日時、テキストのクリップボード。
+- 外部プロセスの非同期起動、終了待ちと標準出力の取得。
 - Playerでの1行スクリプト実行と、`.deck` のユーザー単位の関連付け。
 
 ## 動作環境とビルド
@@ -54,7 +59,7 @@ rem Deckにスクリプト用の引数を渡す
 ScriptDeck.exe sample.deck "hello" "C:\work\input.txt"
 ```
 
-Deck未指定時は `%LOCALAPPDATA%\ScriptDeck\home.deck` を開きます。ファイルがなければ、実行ファイルの内蔵リソースから初期Homeを作成します。初期Homeの「Open Deck」ボタンでDeckを選べます。
+Deck未指定時は `%LOCALAPPDATA%\ScriptDeck\home.deck` を開きます。ファイルがなければ、実行ファイルの内蔵リソースから初期Homeを作成します。初期Homeの「Open Deck」でDeckを選べます。「新規Deck」で未保存のDeckを作り、Magicへ切り替えます。既存Homeは自動更新しません。
 
 Playerはカードと同じクライアントサイズの固定サイズウィンドウです。Magicではカード・部品・スクリプトを編集して保存できます。「実行プレビュー」で動作を確認し、「Playerモードへ」で通常のPlayerへ切り替えます。
 
@@ -148,15 +153,17 @@ ScriptDeck.exe -run sample.deck copy output.deck
 
 ## ドキュメントとサンプル
 
+最新の分類と詳細は [doc/readme.md](doc/readme.md) を参照してください。
+
 | ファイル | 内容 |
 | --- | --- |
-| [USER_GUIDE.md](doc/USER_GUIDE.md) | Player／Magic、1行スクリプト入力、アイコン、Deckの関連付け。 |
-| [SCRIPT_API.md](doc/SCRIPT_API.md) | スクリプトの実行タイミング、スコープ、クリック・状態変更・ドロップイベント、runCode。 |
-| [OBJECT_API.md](doc/OBJECT_API.md) | カード・部品の検索、プロパティ、リスト、Checkbox／RadioButton、動的作成・削除。 |
-| [NAVIGATION_API.md](doc/NAVIGATION_API.md) | カード・Deck移動、Home、移動時の保存。 |
-| [APP_API.md](doc/APP_API.md) | 起動引数、標準入出力、音声、モード・ウィンドウ制御、フォルダパス、クリップボード。 |
-| [FILE_API.md](doc/FILE_API.md) | テキスト・バイナリーファイル、ファイル操作、選択・保存ダイアログ、パス文字列。 |
-| [HISTORY.md](doc/HISTORY.md) | 過去の変更と検証の記録。 |
+| [USER_GUIDE.md](doc/USER_GUIDE.md) | Player／Magicの操作、スクリプト編集画面と雛形、Ctrl+Spaceの1行実行、終了時の自動保存・未保存確認、Homeからの新規Deck作成、アイコンとDeckの関連付け。 |
+| [SCRIPT_API.md](doc/SCRIPT_API.md) | Deck・カードスクリプトの実行タイミングとスコープ、`openCard`・`mouseUp`・`change`・`dropFiles`、Listbox／DropdownListの選択変更、文字列コードの実行。 |
+| [OBJECT_API.md](doc/OBJECT_API.md) | カード・部品の検索、各プロパティの読み書き、リストの項目・選択状態、Checkbox／RadioButtonの状態・グループ、部品の動的作成・複製・削除・重なり順。 |
+| [NAVIGATION_API.md](doc/NAVIGATION_API.md) | カード移動、Deck切り替えと保存指定、Home、新規Deck作成、`openDeck`・`saveDeck`・`saveAsDeck`、起動時に指定Deckが存在しない場合の動作。 |
+| [APP_API.md](doc/APP_API.md) | 起動引数、JSON・ダイアログ表示、標準入出力、音声、Player／Magic・コンソール・ウィンドウ制御、Home・Deck・EXE・各フォルダのパス、クリップボード、環境変数、外部プロセスの非同期起動・終了待ちと標準出力取得。 |
+| [FILE_API.md](doc/FILE_API.md) | UTF-8のBOM付き／なし、テキスト・バイナリーファイルの読み書き、ファイル・フォルダの列挙と操作、ファイル選択・保存ダイアログ、パス文字列とWindows／Unix形式の変換、ファイルサイズ・作成／更新／アクセス日時。 |
+| [HISTORY.md](doc/HISTORY.md) | 過去の実装・変更・検証の記録。変更当時のファイル構成や仕様を含みます。現在の使い方・仕様は上記のカテゴリ別文書を参照してください。 |
 
 `ScriptDeck/` に `sample.deck` をはじめ、`builtin-test.deck`、`object-test.deck`、`dynamic-test.deck`、`day2-test.deck` を同梱しています。
 

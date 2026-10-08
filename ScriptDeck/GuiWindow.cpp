@@ -272,10 +272,21 @@ int RunGui(const LaunchOptions& options)
         if (!std::filesystem::exists(font)) throw std::runtime_error("Japanese font meiryo.ttc was not found.");
         if (!io.Fonts->AddFontFromFileTTF(PathToUtf8(font).c_str(), 18, nullptr, io.Fonts->GetGlyphRangesJapanese()))
             throw std::runtime_error("Cannot load Japanese font.");
+        ImFont* scriptFont=nullptr;
+        const auto codeFont=std::filesystem::path(windowsPath)/L"Fonts"/L"consola.ttf";
+        if(std::filesystem::exists(codeFont)) {
+            scriptFont=io.Fonts->AddFontFromFileTTF(PathToUtf8(codeFont).c_str(),18,nullptr,io.Fonts->GetGlyphRangesDefault());
+            if(scriptFont) {
+                ImFontConfig merge;merge.MergeMode=true;
+                if(!io.Fonts->AddFontFromFileTTF(PathToUtf8(font).c_str(),18,&merge,io.Fonts->GetGlyphRangesJapanese()))
+                    throw std::runtime_error("Cannot load script editor Japanese font.");
+            }
+        }
         if (!(win32 = ImGui_ImplWin32_Init(hwnd)) || !(dx11 = ImGui_ImplDX11_Init(device.Get(), context.Get())))
             throw std::runtime_error("Cannot initialize ImGui backends.");
         Images images(device.Get());
         GuiServices services;
+        services.scriptFont=scriptFont;
         services.setConsoleMode = [](bool enabled) { ConsoleMode::Instance().SetEnabled(enabled); };
         services.chooseFile = [&](bool save) { return ChooseFile(hwnd, save); };
         services.reportSaveError = [&](const std::string& message) {
@@ -300,6 +311,7 @@ int RunGui(const LaunchOptions& options)
         scriptHost.navigateCard = [&](const std::string& action,const nlohmann::json& target) {return view.NavigateCard(action,target);};
         scriptHost.changeDeck = [&](const std::filesystem::path& path,bool save) {view.RequestDeckChange(path,save);};
         scriptHost.goHome = [&](bool save) {view.RequestHome(save);};
+        scriptHost.newDeck = [&] {view.RequestNewDeck();};
         scriptHost.openDeck = [&](const std::filesystem::path& path) {view.RequestOpenDeck(path);};
         scriptHost.saveDeck = [&](const std::filesystem::path& path) {view.SaveDeck(path);};
         scriptHost.saveAsDeck = [&] {
@@ -504,8 +516,15 @@ int RunGui(const LaunchOptions& options)
                 if(event.generation && event.generation!=view.ScriptGeneration())continue;
                 if(!button)continue;
                 if(event.handler=="mouseUp" && (button->type!=ObjectType::Button||!button->visible||!button->enabled))continue;
-                if(event.handler=="change" && button->type!=ObjectType::Checkbox && button->type!=ObjectType::RadioButton)continue;
-                const auto data=event.handler=="change"?nlohmann::json{{"checked",event.checked},{"group",event.group}}:nlohmann::json::object();
+                nlohmann::json data=nlohmann::json::object();
+                if(event.handler=="change") {
+                    if(button->type==ObjectType::Checkbox||button->type==ObjectType::RadioButton)
+                        data={{"checked",event.checked},{"group",event.group}};
+                    else if(button->type==ObjectType::Listbox||button->type==ObjectType::DropdownList)
+                        data={{"selectedIndex",event.selectedIndex},{"selectedText",event.selectedText},
+                              {"previousSelectedIndex",event.previousSelectedIndex},{"previousSelectedText",event.previousSelectedText}};
+                    else continue;
+                }
                 try { scripts->RunScoped(button->script, card->id + "/" + button->id + ".js", event.handler, card->id, button->id,data); }
                 catch (const std::exception& error) { view.CancelPendingDeckChange(); showScriptError(error); }
             }

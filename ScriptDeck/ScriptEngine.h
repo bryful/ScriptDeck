@@ -16,6 +16,7 @@ struct ScriptHost
     std::function<bool(const std::string&,const nlohmann::json&)> navigateCard;
     std::function<void(const std::filesystem::path&,bool)> changeDeck;
     std::function<void(bool)> goHome;
+    std::function<void()> newDeck;
     std::function<void(const std::filesystem::path&)> openDeck;
     std::function<void(const std::filesystem::path&)> saveDeck;
     std::function<bool()> saveAsDeck;

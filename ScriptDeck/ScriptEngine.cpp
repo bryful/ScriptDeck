@@ -5,6 +5,7 @@
 #include <utility>
 #include "Utf8Path.h"
 #include "HomeDeck.h"
+#include "ScriptSystem.h"
 #include <cmath>
 #include <cstdio>
 #include <algorithm>
@@ -103,11 +104,11 @@ struct ScriptEngine::Impl
     }
     enum Operation {
         GetHomePath, GetDeckPath, GetExePath, GetDocumentPath, GetTempPath, GetAppDataPath,
-        ReadClipboard, WriteClipboard, GetArgs, Write, WriteLine, WriteError, ReadBytes, WriteBytes, ReadBinary, WriteBinary, Flush,
+        GetEnv, LaunchProcess, RunProcess, GetFileSize, GetFileTimes, GetFileInfo, GetFileTimestamp, ReadClipboard, WriteClipboard, GetArgs, Write, WriteLine, WriteError, ReadBytes, WriteBytes, ReadBinary, WriteBinary, Flush,
         OpenDialog, SaveDialog, Console, Magic, BeepOp, PlayWav, StopWav, Exit,
         ReadText, FileWriteText, AppendText, FileReadBytes, FileWriteBytes, Exists, ExistsFile, ExistsDir,
         ResolvePath, GetFiles, GetDirectories, Move, Rename, Delete,
-        GetName, GetNameWithoutExt, GetExt, GetParent, GetFrame, GetNameWithoutFrame, ToWindowsPath, ToUnixPath, NextCard, PrevCard, TopCard, EndCard, GoCardIndex, GoCard, GoHome, ChangeDeck, OpenDeck, SaveDeck, SaveAsDeck, Install, Uninstall, SetTopMost, GetTopMost, WindowFront
+        GetName, GetNameWithoutExt, GetExt, GetParent, GetFrame, GetNameWithoutFrame, ToWindowsPath, ToUnixPath, NextCard, PrevCard, TopCard, EndCard, GoCardIndex, GoCard, GoHome, ChangeDeck, NewDeck, OpenDeck, SaveDeck, SaveAsDeck, Install, Uninstall, SetTopMost, GetTopMost, WindowFront
     };
     static JSValue Argument(int argc, JSValueConst* argv, int index) { return index < argc ? argv[index] : JS_UNDEFINED; }
     static std::string Text(JSContext* ctx, JSValueConst value)
@@ -204,6 +205,35 @@ struct ScriptEngine::Impl
                 } else path=SystemPath(operation);
                 const auto text=path.empty()?std::string{}:PathToUtf8(std::filesystem::absolute(path).lexically_normal());
                 result=JS_NewStringLen(ctx,text.data(),text.size());break;
+            }
+            case GetEnv: {
+                const auto value=ScriptSystem::Environment(Text(ctx,a));
+                result=value?JS_NewStringLen(ctx,value->data(),value->size()):JS_NULL;break;
+            }
+            case GetFileSize: case GetFileTimes: case GetFileInfo: case GetFileTimestamp: {
+                auto info=ScriptSystem::FileInfo(self.files.Resolve(Text(ctx,a)));
+                if(operation==GetFileSize) {
+                    if(info["size"].is_null())throw std::invalid_argument("Expected a regular file.");
+                    result=JS_NewFloat64(ctx,info["size"].get<double>());break;
+                }
+                if(operation==GetFileTimestamp){result=JS_NewFloat64(ctx,info["modifiedTime"].get<double>());break;}
+                if(operation==GetFileTimes){info.erase("path");info.erase("size");info.erase("isDirectory");}
+                const auto encoded=info.dump();result=JS_ParseJSON(ctx,encoded.data(),encoded.size(),"file-info");break;
+            }
+            case LaunchProcess: case RunProcess: {
+                const auto executable=Text(ctx,a);std::vector<std::string> args;
+                if(!JS_IsUndefined(b)) {
+                    if(!JS_IsArray(b))throw std::invalid_argument("Process arguments must be a string array.");
+                    JSValue length=JS_GetPropertyStr(ctx,b,"length");
+                    const auto count=Integer(ctx,length,0,65536);JS_FreeValue(ctx,length);
+                    for(std::size_t i=0;i<count;++i) {
+                        JSValue item=JS_GetPropertyUint32(ctx,b,static_cast<uint32_t>(i));
+                        try{args.push_back(Text(ctx,item));JS_FreeValue(ctx,item);}catch(...){JS_FreeValue(ctx,item);throw;}
+                    }
+                }
+                const auto output=ScriptSystem::Process(executable,args,self.files.Resolve("."),operation==RunProcess);
+                if(operation==RunProcess)result=JS_NewStringLen(ctx,output.data(),output.size());
+                break;
             }
             case ReadClipboard: {
                 if(!self.host.readClipboard)throw std::runtime_error("Clipboard service is unavailable.");
@@ -368,6 +398,9 @@ struct ScriptEngine::Impl
             case ChangeDeck:
                 if(!self.host.changeDeck)throw std::runtime_error("Deck navigation service is unavailable.");
                 self.host.changeDeck(self.files.Resolve(Text(ctx,a)),Boolean(b,true));break;
+            case NewDeck:
+                if(!self.host.newDeck)throw std::runtime_error("New deck service is unavailable.");
+                self.host.newDeck();break;
             case OpenDeck: case SaveDeck: {
                 const auto path=JS_IsUndefined(a)?std::filesystem::path{}:self.files.Resolve(Text(ctx,a));
                 if(!JS_IsUndefined(a) && Text(ctx,a).empty())throw std::invalid_argument("Deck path is empty.");
@@ -408,11 +441,11 @@ struct ScriptEngine::Impl
     void RegisterBuiltins()
     {
         struct Entry{const char* name;int operation;int length;};
-        const Entry apps[]={ {"readClipboard",ReadClipboard,0},{"writeClipboard",WriteClipboard,1},{"getHomePath",GetHomePath,0},{"getDeckPath",GetDeckPath,0},{"getExePath",GetExePath,0},
+        const Entry apps[]={ {"getEnv",GetEnv,1},{"launchProcess",LaunchProcess,1},{"runProcess",RunProcess,1},{"readClipboard",ReadClipboard,0},{"writeClipboard",WriteClipboard,1},{"getHomePath",GetHomePath,0},{"getDeckPath",GetDeckPath,0},{"getExePath",GetExePath,0},
             {"getDocumentPath",GetDocumentPath,0},{"getDocumentsPath",GetDocumentPath,0},{"getTempPath",GetTempPath,0},{"getAppDataPath",GetAppDataPath,0},{"getArgs",GetArgs,0},{"openFileDialog",OpenDialog,0},{"saveFileDialog",SaveDialog,0},{"write",Write,1},{"writeLine",WriteLine,1},{"writeError",WriteError,1},
             {"readBytes",ReadBytes,1},{"writeBytes",WriteBytes,1},{"readBinary",ReadBinary,0},{"writeBinary",WriteBinary,1},
-            {"install",Install,0},{"uninstall",Uninstall,0},{"goHome",GoHome,0},{"nextCard",NextCard,0},{"prevCard",PrevCard,0},{"topCard",TopCard,0},{"endCard",EndCard,0},{"goCardIndex",GoCardIndex,1},{"goCard",GoCard,1},{"changeDeck",ChangeDeck,1},{"openDeck",OpenDeck,0},{"saveDeck",SaveDeck,0},{"saveAsDeck",SaveAsDeck,0},{"setTopMost",SetTopMost,1},{"getTopMost",GetTopMost,0},{"windowFront",WindowFront,0},{"flush",Flush,0},{"setConsoleMode",Console,1},{"setMagic",Magic,1},{"beep",BeepOp,0},{"playWav",PlayWav,1},{"stopWav",StopWav,0},{"exit",Exit,0}};
-        const Entry fs[]={ {"readText",ReadText,1},{"writeText",FileWriteText,2},{"appendText",AppendText,2},{"readBytes",FileReadBytes,1},{"writeBytes",FileWriteBytes,2},
+            {"install",Install,0},{"uninstall",Uninstall,0},{"goHome",GoHome,0},{"nextCard",NextCard,0},{"prevCard",PrevCard,0},{"topCard",TopCard,0},{"endCard",EndCard,0},{"goCardIndex",GoCardIndex,1},{"goCard",GoCard,1},{"changeDeck",ChangeDeck,1},{"newDeck",NewDeck,0},{"openDeck",OpenDeck,0},{"saveDeck",SaveDeck,0},{"saveAsDeck",SaveAsDeck,0},{"setTopMost",SetTopMost,1},{"getTopMost",GetTopMost,0},{"windowFront",WindowFront,0},{"flush",Flush,0},{"setConsoleMode",Console,1},{"setMagic",Magic,1},{"beep",BeepOp,0},{"playWav",PlayWav,1},{"stopWav",StopWav,0},{"exit",Exit,0}};
+        const Entry fs[]={ {"getFileSize",GetFileSize,1},{"getFileTimes",GetFileTimes,1},{"getFileInfo",GetFileInfo,1},{"getFileTimestamp",GetFileTimestamp,1},{"readText",ReadText,1},{"writeText",FileWriteText,2},{"appendText",AppendText,2},{"readBytes",FileReadBytes,1},{"writeBytes",FileWriteBytes,2},
             {"exists",Exists,1},{"existsFile",ExistsFile,1},{"existsDir",ExistsDir,1},{"resolvePath",ResolvePath,1},
             {"toWindowsPath",ToWindowsPath,1},{"toUnixPath",ToUnixPath,1},{"getName",GetName,1},{"getNameWithoutExt",GetNameWithoutExt,1},{"getExt",GetExt,1},{"getParent",GetParent,1},{"getFrame",GetFrame,1},{"getNameWithoutFrame",GetNameWithoutFrame,1},{"getFiles",GetFiles,1},{"getDirectories",GetDirectories,1},{"move",Move,2},{"rename",Rename,2},{"delete",Delete,1}};
         auto add=[&](const char* name,const Entry* entries,std::size_t count){

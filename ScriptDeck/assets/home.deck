@@ -33,6 +33,17 @@
           "width": 180,
           "height": 36,
           "script": "function mouseUp() { const path = app.openFileDialog({title: \"Open Deck\", filters: [{name: \"ScriptDeck\", pattern: \"*.deck\"}]}); if (path !== null) app.changeDeck(path); }"
+        },
+        {
+          "id": "new",
+          "type": "button",
+          "name": "new",
+          "text": "新規Deck",
+          "x": 32,
+          "y": 152,
+          "width": 180,
+          "height": 36,
+          "script": "function mouseUp(event) { app.newDeck(); }"
         }
       ]
     }

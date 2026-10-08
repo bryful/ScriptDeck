@@ -16,6 +16,7 @@ struct GuiServices
     std::vector<std::pair<std::string, std::string>> imageResources;
     std::function<ImTextureID(const std::string&)> resourceImage;
     std::function<void(bool)> setConsoleMode;
+    ImFont* scriptFont = nullptr;
 };
 struct ButtonEvent {
     std::string cardId; std::string buttonId;
@@ -23,6 +24,8 @@ struct ButtonEvent {
     bool checked = false;
     std::string group;
     unsigned long long generation = 0;
+    int selectedIndex = -1, previousSelectedIndex = -1;
+    std::string selectedText, previousSelectedText;
 };
 struct ConsoleCommand { std::string code; unsigned long long generation = 0; int readyFrame = 0; };
 struct FileDropEvent {
@@ -45,6 +48,7 @@ public:
     bool NavigateCard(const std::string& action, const nlohmann::json& target=nullptr);
     void RequestDeckChange(const std::filesystem::path& path, bool saveCurrent=true);
     void RequestHome(bool saveCurrent=true);
+    void RequestNewDeck();
     void RequestOpenDeck(const std::filesystem::path& path={});
     void SaveDeck(const std::filesystem::path& path={});
     bool HasPendingDeckChange() const { return pendingDeck_.has_value(); }
@@ -57,7 +61,10 @@ public:
     void NotifyScriptMutation() { dirty_ = true; }
     const Stack& DeckData() const { return stack_; }
     unsigned long long ScriptGeneration() const { return scriptGeneration_; }
-    bool ScriptsEnabled() const { return !magic_ || test_; }
+    bool ScriptsEnabled() const { return !scriptEditing_ && (!magic_ || test_); }
+    void BeginScriptEditor(const std::string& kind, const std::string& cardId={}, const std::string& objectId={});
+    void EndScriptEditor();
+    bool IsScriptEditorOpen() const { return scriptEditing_; }
     bool HasUnsavedChanges() const { return dirty_; }
     std::string WindowTitle() const;
     const std::filesystem::path& DeckPath() const { return path_; }
@@ -68,12 +75,16 @@ public:
     int CardHeight() const { return stack_.height; }
     const std::string& DeckName() const { return stack_.name; }
 private:
-    struct PendingDeck { Stack data; std::filesystem::path path; bool saveCurrent; };
+    struct PendingDeck { Stack data; std::filesystem::path path; bool saveCurrent; bool isNew = false; };
     std::optional<PendingDeck> pendingDeck_;
     Stack stack_;
     std::filesystem::path path_;
     GuiServices services_;
     bool magic_ = false, test_ = false, dirty_ = false;
+    bool scriptEditing_ = false, scriptEditorFocus_ = false;
+    std::string scriptEditorKind_, scriptEditorCard_, scriptEditorObject_, scriptEditorTitle_;
+    void DrawScriptEditor();
+    std::string* EditingScript();
     bool scriptConsoleOpen_ = false, scriptConsoleFocus_ = false;
     std::string scriptConsoleInput_;
     std::vector<ConsoleCommand> consoleCommands_;

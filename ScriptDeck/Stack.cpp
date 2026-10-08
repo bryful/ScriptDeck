@@ -112,6 +112,7 @@ void Stack::CreateNew(const std::string& stackName)
 {
     *this = Stack{};
     name = stackName;
+    script = DefaultDeckScript();
     AddCard("Card 1");
 }
 Card& Stack::AddCard(const std::string& cardName)
@@ -121,6 +122,7 @@ Card& Stack::AddCard(const std::string& cardName)
     Card c;
     c.id = "card" + std::to_string(n);
     c.name = cardName;
+    c.script = DefaultCardScript();
     cards.push_back(std::move(c));
     if (currentCardId.empty()) currentCardId = cards.back().id;
     return cards.back();
@@ -135,6 +137,7 @@ CardObject& Stack::AddObject(const std::string& cardId, ObjectType type,
     CardObject o;
     o.id = "object" + std::to_string(n);
     o.type = type;
+    o.script = DefaultObjectScript(type);
     o.name = objectName;
     o.text = objectName;
     if (type == ObjectType::Listbox || type == ObjectType::DropdownList) {

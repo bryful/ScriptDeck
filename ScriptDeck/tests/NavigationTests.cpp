@@ -17,7 +17,14 @@ int main()
         auto blocked=first;blocked+=".tmp";
         EnsureHomeDeck(home);Stack homeData;assert(homeData.Load(home));assert(homeData.name=="Home");
         homeData.name="My Home";assert(homeData.Save(home));EnsureHomeDeck(home);assert(homeData.Load(home)&&homeData.name=="My Home");
-        Stack source;source.CreateNew("First");const auto firstId=source.currentCardId;
+        Stack source;source.CreateNew("First");assert(source.script==DefaultDeckScript());
+        assert(source.cards.front().script==DefaultCardScript());
+        for(const auto type:{ObjectType::Button,ObjectType::Listbox,ObjectType::DropdownList,ObjectType::Checkbox,ObjectType::RadioButton,ObjectType::Field,ObjectType::InputBox,ObjectType::Text,ObjectType::Image}) {
+            Stack templates;templates.CreateNew();const auto& object=templates.AddObject(templates.currentCardId,type,"test");
+            assert(object.script==DefaultObjectScript(type));
+            Stack reloaded;assert(reloaded.FromJson(templates.ToJson()));assert(reloaded.cards.front().objects.front().script==object.script);
+        }
+        const auto firstId=source.currentCardId;
         const auto secondId=source.AddCard("Second").id,thirdId=source.AddCard("Third").id;
         source.AddObject(firstId,ObjectType::Text,"message");assert(source.Save(first));
         Stack other;other.CreateNew("Other");assert(other.Save(second));
@@ -81,6 +88,67 @@ check(oldCard.id==='card1');fail(()=>goCardIndex(-1));fail(()=>goCardIndex(1.5))
         fresh.RunGlobal("changeDeck('second.deck',false);","deck-discard.js");assert(view.ApplyPendingDeckChange());
         fresh.RunGlobal("let invalid=0;for(const f of [()=>goHome(1),()=>changeDeck('second.deck',1),()=>changeDeck()]){try{f();}catch(e){invalid++;}}if(invalid!==3)throw new Error('Bad validation');","invalid.js");
         assert(!view.HasPendingDeckChange());
+        // Deck file APIs save synchronously and reload without saving dirty data.
+        GuiView files(options,services);
+        ScriptHost fileHost;fileHost.workingDirectory=root;
+        fileHost.model=std::make_shared<ScriptModel>([&]()->Stack&{return files.MutableDeckData();},[&]{return files.ScriptGeneration();},[&]{files.NotifyScriptMutation();});
+        fileHost.openDeck=[&](const auto& path){files.RequestOpenDeck(path);};
+        fileHost.saveDeck=[&](const auto& path){files.SaveDeck(path);};
+        bool cancel=true;
+        fileHost.saveAsDeck=[&]{if(cancel)return false;files.SaveDeck(root/"保存.deck");return true;};
+        ScriptEngine fileJs([](const std::string&){},fileHost);
+        fileJs.RunGlobal("app.deck.name='API Saved';saveDeck();", "save-deck.js");
+        assert(saved.Load(first)&&saved.name=="API Saved"&&!files.HasUnsavedChanges());
+        fileJs.RunGlobal("app.deck.name='Discard Me';app.openDeck();", "reload.js");
+        assert(files.DeckName()=="Discard Me"&&files.HasPendingDeckChange());
+        assert(files.ApplyPendingDeckChange()&&files.DeckName()=="API Saved");
+        fileHost.model=std::make_shared<ScriptModel>([&]()->Stack&{return files.MutableDeckData();},[&]{return files.ScriptGeneration();},[&]{files.NotifyScriptMutation();});
+        ScriptEngine reloadedFiles([](const std::string&){},fileHost);
+        reloadedFiles.RunGlobal("app.deck.name='Save Path';app.saveDeck('別名.deck');", "save-path.js");
+        assert(files.DeckPath()==root/PathFromUtf8("別名.deck")&&saved.Load(files.DeckPath())&&saved.name=="Save Path");
+        reloadedFiles.RunGlobal("if(saveAsDeck()!==false)throw new Error('Cancel');", "cancel-save.js");
+        assert(files.DeckPath()==root/PathFromUtf8("別名.deck"));
+        cancel=false;
+        reloadedFiles.RunGlobal("if(app.saveAsDeck()!==true)throw new Error('Save As');", "save-as.js");
+        assert(files.DeckPath()==root/PathFromUtf8("保存.deck")&&saved.Load(files.DeckPath()));
+        reloadedFiles.RunGlobal("let errors=0;for(const f of [()=>openDeck('missing.deck'),()=>saveDeck(''),()=>openDeck(3),()=>saveDeck(null),()=>saveDeck('missing-folder/file.deck')]){try{f();}catch(e){errors++;}}if(errors!==5)throw new Error('Validation');", "file-errors.js");
+        assert(!files.HasPendingDeckChange()&&files.DeckPath()==root/PathFromUtf8("保存.deck"));
+        reloadedFiles.RunGlobal("openDeck('second.deck');", "open-path.js");assert(files.ApplyPendingDeckChange()&&files.DeckPath()==second);
+        // Missing Player input errors; Magic creates the requested file, not Home.
+        LaunchOptions missing;missing.stackFile=root/"new.deck";missing.mode=LaunchMode::Player;
+        bool startupFailed=false;try{GuiView player(missing,services);}catch(const std::exception&){startupFailed=true;}
+        assert(startupFailed&&!std::filesystem::exists(missing.stackFile));
+        missing.mode=LaunchMode::Magic;GuiView created(missing,services);
+        assert(created.DeckPath()==missing.stackFile&&saved.Load(missing.stackFile)&&!created.HasUnsavedChanges());
+        missing.stackFile=bad;startupFailed=false;try{GuiView invalid(missing,services);}catch(const std::exception&){startupFailed=true;}
+        assert(startupFailed);std::ifstream unchanged(bad);std::string content;unchanged>>content;assert(content=="bad");
+        // Player exit saves changed data without prompting; Magic still prompts.
+        int prompts=0,saveErrors=0;
+        GuiServices closing=services;
+        closing.discardChanges=[&]{++prompts;return false;};
+        closing.reportSaveError=[&](const std::string&){++saveErrors;};
+        LaunchOptions closeOptions;closeOptions.mode=LaunchMode::Player;closeOptions.stackFile=second;
+        GuiView closingPlayer(closeOptions,closing);
+        assert(closingPlayer.CanClose()&&prompts==0);
+        closingPlayer.MutableDeckData().name="Exit Saved";closingPlayer.NotifyScriptMutation();
+        assert(closingPlayer.HasUnsavedChanges()&&closingPlayer.CanClose());
+        assert(saved.Load(second)&&saved.name=="Exit Saved"&&!closingPlayer.HasUnsavedChanges()&&prompts==0);
+        closingPlayer.MutableDeckData().name="Keep On Failure";closingPlayer.NotifyScriptMutation();
+        auto failedSave=second;failedSave+=".tmp";{std::ofstream f(failedSave);f<<"blocked";}
+        assert(!closingPlayer.CanClose()&&saveErrors==1&&closingPlayer.HasUnsavedChanges());
+        assert(saved.Load(second)&&saved.name=="Exit Saved");std::filesystem::remove(failedSave);
+        closingPlayer.SetMagic(true);assert(!closingPlayer.CanClose()&&prompts==1);
+        closingPlayer.SetMagic(false);assert(closingPlayer.CanClose()&&prompts==1);
+        assert(saved.Load(second)&&saved.name=="Keep On Failure");
+        // Embedded Home button creates an unsaved Deck and enters Magic.
+        Stack embedded;assert(embedded.FromJson(EmbeddedHomeDeck()));
+        const auto* newButton=embedded.cards.front().FindObject("new");assert(newButton);
+        closeOptions.mode=LaunchMode::Player;GuiView newFromHome(closeOptions,services);
+        ScriptHost newHost;newHost.newDeck=[&]{newFromHome.RequestNewDeck();};
+        ScriptEngine newJs([](const std::string&){},newHost);
+        newJs.RunScoped(newButton->script,"home-new.js","mouseUp");
+        assert(newFromHome.HasPendingDeckChange());assert(newFromHome.ApplyPendingDeckChange());
+        assert(newFromHome.IsMagic()&&newFromHome.DeckPath().empty()&&newFromHome.HasUnsavedChanges());
 #ifndef _WIN32
         // No Deck argument resolves to AppData home, without a file dialog.
         const char* previous=std::getenv("XDG_DATA_HOME");const std::optional<std::string> backup=previous?std::optional<std::string>(previous):std::nullopt;

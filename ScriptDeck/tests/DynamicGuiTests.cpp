@@ -27,7 +27,7 @@ int main(){
  {GuiView view(options,services);
  int scriptCalls=0;ScriptHost host;host.model=std::make_shared<ScriptModel>([&]() -> Stack& {return view.MutableDeckData();},[&]{return view.ScriptGeneration();},[&]{view.NotifyScriptMutation();});
  ScriptEngine engine([&](const std::string& text){assert(text=="mouseUp");++scriptCalls;},host);
- engine.RunGlobal("app.currentCard.objectById('"+ok+"').text='Changed';", "gui-model.js");assert(view.DeckData().FindCard(card.id)->FindObject(ok)->text=="Changed");assert(!view.HasUnsavedChanges());
+ engine.RunGlobal("app.currentCard.objectById('"+ok+"').text='Changed';", "gui-model.js");assert(view.DeckData().FindCard(card.id)->FindObject(ok)->text=="Changed");assert(view.HasUnsavedChanges());
  auto dispatch=[&](const std::vector<ButtonEvent>& events){for(const auto& event:events){const auto* c=view.DeckData().FindCard(event.cardId);const auto* b=c->FindObject(event.buttonId);engine.RunScoped(b->script,"button-test.js","mouseUp",c->id,b->id);}};
  auto frame=[&](){ImGui::NewFrame();view.Draw();ImGui::Render();};
  auto key=[&](ImGuiKey key){io.AddKeyEvent(key,true);frame();auto events=view.TakeButtonEvents();io.AddKeyEvent(key,false);frame();return events;};
@@ -45,8 +45,20 @@ int main(){
  auto* root=ImGui::FindWindowByName("ScriptDeck");ImGuiWindow* listWindow=nullptr;
  for(auto* child:root->DC.ChildWindows) if(child->Pos.x==300 && child->Pos.y==70) listWindow=child;
  assert(listWindow);click(listWindow->DC.CursorStartPos.x+10,listWindow->DC.CursorStartPos.y+ImGui::GetTextLineHeightWithSpacing()*2+5);
+ events=view.TakeButtonEvents();assert(events.size()==1&&events[0].buttonId==list&&events[0].handler=="change"&&events[0].selectedIndex==2);
+ assert(events[0].selectedText==view.DeckData().cards.front().FindObject(list)->items[2]);
+ const auto listEvent=events[0];
+ engine.RunScoped("function change(event){if(this.id!==event.target.id||event.selectedIndex!==2||event.selectedText!==this.items[2])throw new Error('List change');}","list-change.js","change",card.id,list,
+   {{"selectedIndex",listEvent.selectedIndex},{"selectedText",listEvent.selectedText},{"previousSelectedIndex",listEvent.previousSelectedIndex},{"previousSelectedText",listEvent.previousSelectedText}});
+ click(listWindow->DC.CursorStartPos.x+10,listWindow->DC.CursorStartPos.y+ImGui::GetTextLineHeightWithSpacing()*2+5);assert(view.TakeButtonEvents().empty());
  click(325,215);frame();auto& popupStack=ImGui::GetCurrentContext()->OpenPopupStack;assert(popupStack.Size>0 && popupStack.back().Window);
  auto* popup=popupStack.back().Window;click(popup->DC.CursorStartPos.x+10,popup->DC.CursorStartPos.y+ImGui::GetTextLineHeightWithSpacing()*2+5);
+ events=view.TakeButtonEvents();assert(events.size()==1&&events[0].buttonId==drop&&events[0].selectedIndex==2&&events[0].handler=="change");
+ const auto dropEvent=events[0];
+ engine.RunScoped("function change(event){if(event.type!=='change'||event.selectedIndex!==2||event.selectedText!==this.selectedText)throw new Error('Dropdown change');}","dropdown-change.js","change",card.id,drop,
+   {{"selectedIndex",dropEvent.selectedIndex},{"selectedText",dropEvent.selectedText},{"previousSelectedIndex",dropEvent.previousSelectedIndex},{"previousSelectedText",dropEvent.previousSelectedText}});
+ engine.RunGlobal("app.currentCard.objectById('"+drop+"').selectedIndex=0;","programmatic-selection.js");assert(view.TakeButtonEvents().empty());
+ engine.RunGlobal("app.currentCard.objectById('"+drop+"').selectedIndex=2;","restore-selection.js");assert(view.TakeButtonEvents().empty());
  click(40,190);io.AddInputCharactersUTF8("ABC\nDEF");frame();events=key(ImGuiKey_Enter);assert(events.empty());
  view.SetMagic(true);engine.RunGlobal("app.currentCard.backgroundColor=[0.9,0.9,0.9,1];", "magic-model.js");assert(view.HasUnsavedChanges());io.DisplaySize=ImVec2(1200,800);frame();frame();
  io.AddKeyEvent(ImGuiMod_Ctrl,true);io.AddKeyEvent(ImGuiKey_S,true);frame();io.AddKeyEvent(ImGuiKey_S,false);io.AddKeyEvent(ImGuiMod_Ctrl,false);frame();
@@ -60,7 +72,7 @@ int main(){
  script:"function mouseUp(event){alert(event.type);for(let i=0;i<40;i++)this.card.createObject('text',{x:0,y:450,text:'New'});this.remove();}"});
  )JS", "dynamic-gui.js");
  frame();frame();click(475,415);events=view.TakeButtonEvents();assert(events.size()==1 && events[0].buttonId=="selfDelete");dispatch(events);frame();
- assert(!view.DeckData().cards.front().FindObject("selfDelete"));assert(view.DeckData().cards.front().objects.size()==previousCount+40);assert(!view.HasUnsavedChanges());
+ assert(!view.DeckData().cards.front().FindObject("selfDelete"));assert(view.DeckData().cards.front().objects.size()==previousCount+40);assert(view.HasUnsavedChanges());
  view.SetMagic(true);io.DisplaySize=ImVec2(1200,800);
  engine.RunGlobal("const temp=app.currentCard.createObject('button');app.currentCard.enterButtonId=temp.id;temp.remove();", "magic-delete.js");
  assert(view.HasUnsavedChanges());assert(view.DeckData().cards.front().enterButtonId.empty());frame();frame();

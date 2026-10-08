@@ -1,10 +1,42 @@
 # 開発・変更記録
 
+更新日：2026-10-08
+
+現在の仕様は [ドキュメント目次](readme.md) のカテゴリ別文書を参照してください。以下は実装の経緯と検証範囲の記録です。
+
+## 最近の更新
+
+| 分類 | 更新内容 | 仕様 |
+| --- | --- | --- |
+| フォルダ構成 | ルートにScriptDeck.slnx、ソースをScriptDeck/、説明書をdoc/へ整理。 | [README.md](../README.md) |
+| スクリプト編集 | 作業領域全体のエディタ、Tab、保存ショートカット、空スクリプトの雛形。 | [USER_GUIDE.md](USER_GUIDE.md) |
+| 状態変更 | Listbox／DropdownListのchangeと選択前後のスナップショット。RadioButton／Checkboxもchangeに対応。 | [SCRIPT_API.md](SCRIPT_API.md) |
+| Deckの入出力 | openDeck／saveDeck／saveAsDeck、新規Deck、指定ファイル不存在時の起動処理。 | [NAVIGATION_API.md](NAVIGATION_API.md) |
+| 終了時保存 | Playerは未保存変更を自動保存。Magicは破棄確認。保存失敗時は終了を止めて内容を維持。 | [USER_GUIDE.md](USER_GUIDE.md) |
+| Home | 内蔵Homeの新規Deckボタン、MagicのHomeを開くボタン。既存Homeは自動上書きしない。 | [NAVIGATION_API.md](NAVIGATION_API.md) |
+| システムAPI | Home・Deck・EXE・各フォルダのパス、テキストのクリップボード、環境変数、外部プロセス。 | [APP_API.md](APP_API.md) |
+| ファイル情報 | ファイルサイズ、作成・更新・アクセス日時、一括取得。 | [FILE_API.md](FILE_API.md) |
+
+## 検証範囲
+
+LinuxでQuickJS-NGとヘッドレスImGuiを使用し、プロパティ、部品の動的操作、状態・選択イベント、スクリプト編集・保存、Deck入出力と切り替え、未保存状態、終了時保存と失敗時の保持を検証しています。外部プロセスはLinuxで実起動・標準出力取得・非同期起動を確認しています。
+
+Windowsでのビルド、実ウィンドウ・フォント、ネイティブダイアログ、クリップボード、レジストリ、Windows版のプロセス起動はこの環境では未確認です。
+
+## 過去の記録
+
+以下には変更当時の仕様・ファイル名が含まれます。「未実装」などの記述を現在の仕様として扱わないでください。
+
+<details>
+<summary>以前の実装・検証記録を表示</summary>
+
+### 開発・変更記録
+
 過去の変更説明と検証記録です。記載のソリューション名・配置は変更当時のものです。現在の仕様はカテゴリ別のAPI文書、ビルド手順は [ルートREADME.md](../README.md) を参照してください。
 
-## 組み込み関数の導入
+#### 組み込み関数の導入
 
-# 組み込み関数実装版
+### 組み込み関数実装版
 
 これまで一覧にしたapp / fs / alert / JSON / runCodeを実装しました。全関数と仕様はAPP_API.md / FILE_API.mdを参照してください。
 
@@ -22,11 +54,11 @@ GUI起動のDeck指定後の引数はすべてスクリプトへ渡します。�
 
 ---
 
-# JavaScript実行・alert確認版
+### JavaScript実行・alert確認版
 
 今回の版はQuickJS-NG v0.16.2を同梱し、PlayerおよびMagicの「実行プレビュー」でJavaScriptを実行できます。ネイティブAPIの公開はalert(object)だけです。JSON.parse/stringifyなどJavaScript標準機能は利用できます。app / fs / runCodeはまだ公開していません。
 
-## 最初の確認
+#### 最初の確認
 
 1. ZIPを新しいフォルダへ展開し、同梱のScriptDeck.slnをVisual Studioで開いてDebug x64をビルドします。QuickJSはC11としてコンパイルするため、今回は.cppだけの上書きではなくプロジェクト設定も更新してください。DLLの追加配置は不要です。
 2. `ScriptDeck.exe alert-test.deck`でPlayerを起動します。「alert(object)」ボタンをクリックすると、日本語・配列・クリック回数を含むダイアログを表示します。Enterも同じボタンを実行します。
@@ -52,7 +84,7 @@ GUI起動のDeck指定後の引数はすべてスクリプトへ渡します。�
 
 Windows用のDear ImGui + Win32 + DirectX 11によるGUIです。依存ソースを同梱しているため追加ダウンロードは不要です。
 
-## Visual Studio 2026で起動
+#### Visual Studio 2026で起動
 
 1. ZIPを新しいフォルダへ展開します。
 2. ScriptDeck.slnを開きます。
@@ -75,7 +107,7 @@ bin\x64\Debug\ScriptDeck.exe -run sample.deck dump
 -magic: 編集画面。カード・部品の追加／削除、ドラッグ移動、右下ハンドルでサイズ変更、プロパティ編集、保存／別名保存。
 実行プレビュー: 編集パネルを隠してPlayerと同じ部品表示を確認できます。プレビュー中の入力やカード移動は現在のデッキへ反映されます。保存すると反映後の状態が保存されます。
 
-## 操作
+#### 操作
 
 - 部品の追加: 左側のbutton / field / text / image。
 - 部品の選択: キャンバス上、または左側の部品一覧をクリック。
@@ -92,7 +124,7 @@ bin\x64\Debug\ScriptDeck.exe -run sample.deck dump
 画像はパス単位でキャッシュします。外部で同じ画像を更新した場合はアプリを再起動してください。
 カード・部品の削除にはUndoはありません。操作後に保存しなければ元のファイルは変更されません。
 
-## 現段階の範囲
+#### 現段階の範囲
 
 GUIとJSONデータの編集・保存・読み込みを実装しています。
 JavaScript/QuickJSの実行、ExternalObject、音声、イベント処理は未実装です。
@@ -105,7 +137,7 @@ Stack → Card → CardObjectの階層、ID検索、型・重複ID・サイズ�
 保存は同じ場所の.tmpへ書いてから置換します。失敗時は復旧用に.tmpを残します。同時保存には対応しません。
 CLIのinfo / dump / validate / copyは維持しています。main等のJavaScript関数呼び出しはまだありません。
 
-## 既存のVisual Studioプロジェクトへ組み込む場合
+#### 既存のVisual Studioプロジェクトへ組み込む場合
 
 今回のScriptDeckApp.cppも含めてソースを差し替えます。GuiView.cpp / GuiWindow.cppを追加します。
 imgui.cpp / imgui_draw.cpp / imgui_tables.cpp / imgui_widgets.cpp、imgui/misc/cpp/imgui_stdlib.cpp、imgui/backends/imgui_impl_win32.cpp / imgui_impl_dx11.cppもビルド対象へ追加します。
@@ -115,7 +147,7 @@ C++17またはC++20、/utf-8、Unicode、プリコンパイル済みヘッダー
 自動生成されたScriptDeck.cppは除外し、main.cppだけを入口にしてください。
 GUIモードでは単独起動時の専用コンソールを解放します。端末から呼び出した場合の端末は維持します。
 
-## 検証と環境
+#### 検証と環境
 
 LinuxのC++20でGUI描画部分のコンパイル、ImGuiのPlayer/Magic描画フレーム、キーボードからの開く／新規／保存／別名保存、JSON往復、未保存変更の確認、CLI動作を検証しています。
 Windows側のウィンドウ、DirectX、ファイルダイアログ、WIC画像読込、IMEの実機操作はこの環境では未確認です。
@@ -123,13 +155,13 @@ Windows以外では既存のテキスト版とCLIのみをビルドします。
 
 同梱依存: Dear ImGui 1.91.9b（MIT、imgui/LICENSE.txt）、nlohmann/json 3.12.0（MIT、json.hpp内に記載）。
 
-## ImGuiが見つからない場合
+#### ImGuiが見つからない場合
 
 imguiフォルダはScriptDeck.vcxprojと同じフォルダに必要です。ZIPはフォルダ構成を維持したまま新しい場所に展開して同梱のScriptDeck.slnを開いてください。ソースファイルだけのコピーではビルドできません。既存プロジェクトへ移す場合もimguiフォルダ全体とnlohmannフォルダを一緒にコピーしてください。
 
 今回のプロジェクトはソース・ヘッダー・追加インクルードパスをMSBuildProjectDirectoryから指定します。NOMINMAXの再定義とCard::FindObjectの引数名による隠蔽警告も修正済みです。
 
-## Player表示の修正
+#### Player表示の修正
 
 カード左上=(0,0)、表示領域=Stackのwidth×heightです。タイトルバー・OSの外枠の分だけ外寸は大きくなります。サイズ変更枠と最大化を無効にし、DPIの異なるモニターへ移動しても表示領域のピクセル数を保つようにしています。Playerには状態メッセージや開発情報を表示しません。読み込みエラーは独立したダイアログに表示します。Magicの編集UIは維持しています。
 
@@ -137,7 +169,7 @@ imguiフォルダはScriptDeck.vcxprojと同じフォルダに必要です。ZIP
 
 検証: Playerの表示領域640×480、余白0、入力欄の配置20×70・サイズ400×80、カード外の子パネルなし、全体スクロールなしをImGui描画テストで確認しました。Magicの開く・新規・保存・別名保存・変更破棄確認も通過しています。Win32側の固定サイズ・DPI・タイトル変更の実機操作は未確認です。
 
-## Playerの起動位置・実行中のサイズ変更
+#### Playerの起動位置・実行中のサイズ変更
 
 Magicの左上に「Player起動位置」を追加しました。選択後はデッキを保存してください。
 - デフォルト: Windowsが決める位置。サイズはデッキ保存時のwidth/height。
@@ -154,7 +186,7 @@ C++ではGuiView::SetCardSize(width, height)を実行中に呼べます（UIス�
 
 検証:3種類の設定のJSON保存・復元、旧.deck互換、前回状態の保存・復元、不正記録の拒否、実行中の640×480→800×600変更後の描画と範囲チェック、CLIテストが通過しています。Windowsの配置・モニター・DirectX連動の実機確認は未実施です。
 
-## 起動位置の4種類と前回記録の分離
+#### 起動位置の4種類と前回記録の分離
 
 現在の選択肢は以下の4種類です。
 1. デフォルト: Windows標準の位置＋デッキに保存されたカードサイズ。
@@ -167,7 +199,7 @@ C++ではGuiView::SetCardSize(width, height)を実行中に呼べます（UIス�
 JSON上の方式はdefault / previous_default / previous_center / center。旧方式previousはprevious_defaultとして引き継ぎます。
 この更新だけ適用する場合はStack.cpp / GuiView.cpp / GuiWindow.cpp / WindowState.hを上書きしてください。
 
-## app.setMagicの準備実装
+#### app.setMagicの準備実装
 
 スクリプトのAPI名はapp.setMagic(true) / app.setMagic(false)で固定します。
 AppScriptApi.hにネイティブの受け口AppScriptApi::setMagic(bool)、GuiViewに実際のSetMagic(bool)を実装しています。Windowsホストはモード変更を監視してウィンドウ枠・表示サイズ・タイトルを更新します。
@@ -179,7 +211,7 @@ AppScriptApi.hにネイティブの受け口AppScriptApi::setMagic(bool)、GuiVi
 
 テスト:AppScriptApi::setMagicからの両方向切り替え、同じモードへの呼び出し、描画、デッキとサイズの保持、未保存変更の破棄確認が通過。Win32側のウィンドウ切り替えの実機確認は未実施です。
 
-## 追加部品とカードキー属性
+#### 追加部品とカードキー属性
 
 Magicの追加ボタンにlistbox / dropdownlist / inputboxを追加しました。
 - Listbox: 複数の項目を常時表示し、1項目を選択する。
@@ -190,7 +222,7 @@ Listbox/DropdownListの項目はプロパティで1行1項目として編集し�
 カード名の下にEnterボタン / Escapeボタンを追加しました。「指定なし」または同じカード内のButtonを選べます。Field/InputBoxのフォーカス中とDropdown展開中はカードキー配送を抑止します。非表示・無効のButtonは配送しません。対応Buttonを削除するとカード側の指定も解除します。
 キーによる押下とマウスクリックは同じネイティブボタンイベントキューに入ります。JavaScriptの実行はまだありません。
 
-## 内蔵画像
+#### 内蔵画像
 
 Imageの「画像ソース」で外部ファイル／内蔵リソースを選べます。内蔵リソースにはScriptDeckロゴを同梱しました。画像バイナリはScriptDeck.exeのRCDATAへ組み込み、.deckにはimageSource="resource"とresourceIdだけを保存します。外部画像ファイルがなくても内蔵画像は表示できます。
 追加するときはResourceIds.hに数値ID、ScriptDeck.rcにRCDATAのファイル定義、ImageResources.hにデッキで使う文字列ID・表示名・数値IDを追加して再ビルドしてください。デッキの画像をexeへ取り込む編集機能はありません。
@@ -199,7 +231,7 @@ Imageの「画像ソース」で外部ファイル／内蔵リソースを選べ
 
 検証: Listbox/DropdownListの選択操作と保存、InputBoxの貼り付け改行除去、新部品のJSON保存・読み込み・描画、InputBoxでのReturn/テンキーEnter後のフォーカス保持、Field/InputBoxフォーカス時のEnter/Escape抑止、フォーカス解除後の復帰、マウスとキー押下のイベント一致、内蔵リソースIDの描画ルーティング、CLI回帰テストが通過しています。Windowsのリソースコンパイル・WICメモリ画像デコード・実機操作は未確認です。
 
-## カードとオブジェクトの色
+#### カードとオブジェクトの色
 
 Magicのカード属性に「カード背景色」を追加しました。選択した部品のプロパティでは「色」を開くと、背景色・文字色・枠線色を個別に指定できます。Imageは文字色の代わりに「画像の着色」を指定します。チェックを外すと標準色に戻り、Aで不透明度を調整できます。Text/Imageの背景も指定可能です。Listbox/DropdownListは項目・展開リストにも指定色を適用し、選択・ホバー時は背景を明るくして区別します。Magicの選択枠とサイズ変更ハンドルは編集用の青色を維持します。
 
@@ -209,11 +241,11 @@ JSONはRGBA各0～1の4要素配列です。カードはbackgroundColor、オブ
 
 検証: 色の保存・読み込み、旧デッキ互換、不正なRGBAの拒否、Player/Magicの描画色、前回追加した部品・キー操作の回帰テストを確認しました。Windowsの実機表示は未確認です。
 
-## Magicの未保存表示
+#### Magicの未保存表示
 
 保存成功のメッセージは表示しません。Magicのネイティブタイトルは「デッキ名 - Magic」で、未保存の変更がある場合だけ末尾に「 *」を表示します。保存成功で消え、保存キャンセル・失敗時は残ります。新規デッキも保存前は「*」付きです。今回の上書き対象はGuiView.h / GuiView.cpp / GuiWindow.cppです。
 
-## 必要時だけコンソールを使用
+#### 必要時だけコンソールを使用
 
 WindowsではGUIアプリとして起動し、Player/Magicではコンソールを開きません。-runと--helpの場合だけ親コンソールへ接続し、親がなくリダイレクトもなければコンソールを作成します。標準出力・標準エラー・標準入力のリダイレクトを保持します。GUI起動エラーはメッセージボックスで表示します。
 
@@ -221,7 +253,7 @@ WindowsではGUIアプリとして起動し、Player/Magicではコンソール�
 
 Windowsサブシステムのexeはcmdで待機されない場合があります。バッチ処理で終了待ちが必要な場合は start /wait "" ScriptDeck.exe -run sample.deck dump > output.json を使用してください。Windowsでの親コンソール接続・リダイレクトの実機検証は未実施です。
 
-## app.setConsoleMode
+#### app.setConsoleMode
 
 app.setConsoleMode(true)で実行中に親コンソールへ接続し、親がなければ作成します。falseでScriptDeckの接続を解除し、単独で作成したコンソールを閉じます。親のcmd/PowerShellは終了しません。再度trueを呼べます。標準入力・出力・エラーを再接続し、ファイル・パイプへのリダイレクトは切り替え後も維持します。無効中の非リダイレクト出力はNULへ送ります。デッキの保存状態・Player/Magicは変えません。
 
@@ -229,27 +261,27 @@ C++のAppScriptApi::setConsoleMode(bool)は実装済みです。UIスレッド�
 
 上書きはmain.cpp / GuiView.h / GuiView.cpp / GuiWindow.cpp / AppScriptApi.h、新規追加はConsoleMode.hです。Windowsでの実コンソール切り替えは実機未確認です。
 
-## Magicの前回ウィンドウ復元
+#### Magicの前回ウィンドウ復元
 
 Magicの位置・通常時のサイズ・最大化状態を%LOCALAPPDATA%\ScriptDeck\WindowState\magic.jsonへ保存し、次回復元します。デッキに依存しないMagic共通設定です。設定がない、または読み込めない場合は最大化で起動します。最大化終了でも通常サイズを保持します。最小化状態は復元せず、最小化前の通常／最大化へ戻します。モード切り替え時にもMagic状態を保存します。上書き対象はGuiWindow.cpp / WindowState.hです。Windowsでの実機動作は未確認です。
 
-## alertのWindowsスタックエラー修正
+#### alertのWindowsスタックエラー修正
 
 alert内の正規表現replaceを廃止し、終端文字の可視化は長さ付きUTF-8を受け取るC++処理へ移しました。各実行前にQuickJSのスタック基準を更新し、JSスタック上限を1MiBに設定します。変更対象はScriptEngine.cppだけです。プロジェクトのネイティブスタック予約8MiBは維持してください。
 
-## カード・オブジェクトのJavaScript操作
+#### カード・オブジェクトのJavaScript操作
 
 OBJECT_API.mdに検索・プロパティの読み書き・Listbox/DropdownList操作を掲載しています。ScriptModel.h/.cppを追加したため、今回のScriptDeck.sln / .vcxprojでビルドしてください。
 
-## 動的オブジェクト
+#### 動的オブジェクト
 
 card.createObject / removeObject、object.remove / clone、一覧取得と並べ替えを追加。仕様はOBJECT_API.md、動作例はdynamic-test.deckです。通常のPlayer、またはMagicの実行プレビューで確認してください。
 
-## Magicの並べ替え
+#### Magicの並べ替え
 
 カード一覧・部品一覧で対象を選び、「上へ」「下へ」で順番を変更できます。選択対象とIDを保持し、変更は未保存扱いになります。部品は一覧の下ほど後に描画されます。保存するとカード順・部品順がDeckファイルへ反映されます。
 
-## Checkbox / RadioButton・ファイル選択・ドロップ
+#### Checkbox / RadioButton・ファイル選択・ドロップ
 
 SCRIPT_API.mdを参照してください。day2-test.deckにGUI・スクリプトの操作例を収録しました。FileDialogs.h/.cppを追加したため、更新済み.vcxprojでリビルドしてください。
 
@@ -258,9 +290,9 @@ SCRIPT_API.mdを参照してください。day2-test.deckにGUI・スクリプ�
 Version 1.0のPlayerスクリプト入力、アイコン、`app.install()` / `app.uninstall()` は [USER_GUIDE.md](USER_GUIDE.md) を参照してください。
 
 
-## 部品APIの導入
+#### 部品APIの導入
 
-# 今回の変更
+### 今回の変更
 
 - ScriptModel.h/.cpp: 現在のDeckをIDで解決するプロパティ接続。検索、型・値検証、項目操作、変更通知。
 - ScriptEngine.h/.cpp: app.deck / app.currentCard、カード・オブジェクトのProxy、this / event.target。
@@ -273,19 +305,19 @@ Version 1.0のPlayerスクリプト入力、アイコン、`app.install()` / `ap
 
 確認: LinuxでQuickJS-NGを実際に実行し、検索・プロパティ・項目操作・参照寿命・不正値・イベント対象をテスト。従来のJavaScript/BuiltinTestsも成功。ImGuiのGUIテストで入力フォーカス、Enter/Escape、選択、Player/Magicの変更通知と保存を確認。Windows実機でのビルドと表示は未確認です。
 
-## 動的オブジェクトの追加
+#### 動的オブジェクトの追加
 
 ScriptModel.h/.cppとScriptEngine.cppに作成・削除・複製・一覧取得・順序変更を追加。削除したIDの実行中再利用を防止し、削除時のEnter/Escape設定を解除します。作成プロパティは追加前に検証します。CMakeにDynamicTestsを登録し、dynamic-test.deckを同梱しました。既存.vcxprojはScriptModel.cppをすでに含むためソース登録の変更はありません。
 
-## Magicの並べ替えUI
+#### Magicの並べ替えUI
 
 GuiView.cppのカード一覧・部品一覧へ「上へ」「下へ」を追加。先頭・末尾・未選択の場合は移動を無効化します。現在カードと選択部品のIDを維持し、変更はタイトルの*と保存内容に反映します。部品一覧に描画順の説明を付けました。
 
-## プロパティラベルの見切れ修正
+#### プロパティラベルの見切れ修正
 
 GuiView.cppで文字・リスト項目・選択番号のラベルを入力欄の上へ移動し、幅いっぱいの入力欄から右へ押し出されないようにしました。
 
-## Checkbox / RadioButton・ダイアログ・ファイルドロップ
+#### Checkbox / RadioButton・ダイアログ・ファイルドロップ
 
 - CardObject.h / Card.h / Stack.cpp: checked/groupとRadioButtonの排他制御、JSON保存・旧形式読み込み。
 - ScriptModel.cpp: 新プロパティ、動的作成・複製時の排他制御。
@@ -299,7 +331,9 @@ GuiView.cppで文字・リスト項目・選択番号のラベルを入力欄の
 QuickJS・ImGuiで状態・イベント・排他・保存・ドロップ領域・ダイアログの接続契約を検証。Windows実機のダイアログ表示とExplorerからの実ドロップは未確認です。
 
 
-## Checkbox・ダイアログ・ドロップの検証
+#### Checkbox・ダイアログ・ドロップの検証
 
 
 LinuxでQuickJS-NGの実エンジンとImGuiの描画・入力を使い、状態・排他制御・change/dropFiles・オプション・Unicodeパス・キャンセル・ダイアログ待機時間の扱い・Magic保存を検証しました。従来のスクリプト・組み込み関数・動的作成・並べ替えも回帰テスト済みです。Windowsでの実ダイアログ表示とExplorerからの実ドロップは未確認です。
+
+</details>

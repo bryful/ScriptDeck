@@ -1,5 +1,7 @@
 # カード・オブジェクトAPI
 
+更新日：2026-10-08
+
 PlayerとMagicの実行プレビューで利用できます。読み取りは現在のデータを返し、代入は画面へ反映されます。Magicの変更は未保存としてタイトルに `*` を付け、通常の保存対象になります。Playerの変更は未保存として記録し、終了時に現在のDeckへ自動保存します。
 
 ```javascript
@@ -69,6 +71,8 @@ list.setItem(0, "RED");
 insertItem/removeItemは選択している項目を保つよう番号を調整します。items全体の代入は現在の選択番号を保持し、範囲外なら未選択にします。項目操作はスクリプトを再実行したりmouseUpを発生させたりしません。
 
 配列・色の読み取りはコピーです。`list.items.push("追加")`や`object.textColor[0] = 1`だけでは更新されません。配列全体を代入するか、項目操作メソッドを使ってください。
+
+ユーザーによる選択変更は `change(event)` で受け取れます。詳細は [SCRIPT_API.md](SCRIPT_API.md#listbox--dropdownlistの選択変更) を参照してください。
 
 ## カード / Deck
 
@@ -156,3 +160,11 @@ checkedはbooleanで既定値false。RadioButtonのgroupはstringで既定値空
 チェック状態を保ったRadioButtonのgroup変更・動的作成・複製でも、移動先グループの他のRadioButtonを解除します。checked/groupはDeckに保存し、古いDeckにフィールドがなくても既定値で読み込めます。同一グループに複数のcheckedを含む不正なDeckは読み込みを拒否します。
 
 状態変更イベントは [SCRIPT_API.md](SCRIPT_API.md#状態変更-change) を参照してください。
+
+
+## 編集画面とイベント
+
+Magicでは部品・カード・Deckのスクリプト編集ボタンから作業領域全体のコードエディタを開きます。変更は対象のscriptに反映されます。編集操作と雛形は [USER_GUIDE.md](USER_GUIDE.md)、状態・選択変更を受け取るchangeイベントは [SCRIPT_API.md](SCRIPT_API.md) を参照してください。
+
+
+新規部品には型に応じたイベント雛形を設定します。createObjectの初期プロパティでscriptを指定した場合は指定コードを使用します。cloneは元のコードを保持します。雛形の一覧は [USER_GUIDE.md](USER_GUIDE.md) を参照してください。

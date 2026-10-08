@@ -1,5 +1,7 @@
 # ファイル・パスAPI
 
+更新日：2026-10-08
+
 PlayerとMagicの実行プレビューで利用できます。相対パスは起動時のカレントフォルダ基準です。不正な引数はTypeError、操作失敗は例外になります。
 
 ## ファイル
@@ -91,3 +93,29 @@ toUnixPath("C:\\work\\aaa\\bbb");  // "/c/work/aaa/bbb"
 Version 1.0のPlayerスクリプト入力、アイコン、`app.install()` / `app.uninstall()` は [USER_GUIDE.md](USER_GUIDE.md) を参照してください。
 
 アプリケーションや設定フォルダのフルパス取得は [APP_API.md](APP_API.md#アプリケーションフォルダのフルパス) を参照してください。
+
+
+## ファイルサイズ・日時
+
+| API | 戻り値 |
+| --- | --- |
+| `fs.getFileSize(path)` | ファイルサイズ（バイト数、number）。フォルダ指定は例外。 |
+| `fs.getFileTimes(path)` | `{ createdTime, modifiedTime, accessedTime }`。 |
+| `fs.getFileTimestamp(path)` | 更新日時だけを取得。getFileTimes(path).modifiedTimeと同じ。 |
+| `fs.getFileInfo(path)` | `{ path, size, isDirectory, createdTime, modifiedTime, accessedTime }`。pathはフルパス、フォルダのsizeはnull。 |
+
+日時はUTCのUnix時刻をミリ秒で返し、`new Date(value)` に渡せます。取得不能な作成日時はnullです。Windowsでは作成・更新・アクセス日時を取得します。非Windowsのテスト版は作成日時をnullとして返します。アクセス日時の更新頻度はOSとファイルシステムの設定に依存します。
+
+```javascript
+const info = fs.getFileInfo("C:\\work\\image.tga");
+alert(info.size);
+alert(new Date(info.modifiedTime).toLocaleString());
+if (info.createdTime !== null) alert(new Date(info.createdTime));
+```
+
+存在しないパスや読み取り失敗は例外です。相対パスは起動時のカレントフォルダ基準です。サイズはJavaScriptのnumberのため、2^53を超える値の整数精度は保証しません。
+
+
+## Deckファイルとの使い分け
+
+fs.readText／writeTextはファイル内容を読み書きするだけで、現在のDeckや画面は切り替えません。Deckとして読み込む・保存するにはopenDeck／saveDeck／saveAsDeckを使用してください。詳細は [NAVIGATION_API.md](NAVIGATION_API.md) にまとめています。環境変数と外部プロセスは [APP_API.md](APP_API.md) を参照してください。

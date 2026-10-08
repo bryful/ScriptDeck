@@ -114,6 +114,36 @@ int main()
         // Close button also hides it without touching the Deck.
         auto* popup=ImGui::FindWindowByName("スクリプト実行");auto& g=*ImGui::GetCurrentContext();g.NavWindow=popup;g.NavNextActivateId=popup->GetID("Close");frame();frame();assert(!view.IsScriptConsoleOpen());
     }
+    {
+        options.mode=LaunchMode::Magic;
+        GuiView editing(options,services);
+        auto frame=[&]{ImGui::NewFrame();editing.Draw();ImGui::Render();};
+        const auto objectId=editing.DeckData().cards.front().objects.front().id;
+        for(const std::string kind:{"deck","card","object"}) {
+            editing.BeginScriptEditor(kind,card,objectId);
+            if(kind=="card")assert(editing.DeckData().cards.front().script==DefaultCardScript());
+            if(kind=="deck")assert(editing.DeckData().script.find("Deckオープン時に実行されます")!=std::string::npos);
+            frame();frame();frame();
+            assert(editing.IsScriptEditorOpen()&&!editing.ScriptsEnabled());
+            auto* main=ImGui::FindWindowByName("ScriptDeck");
+            assert(main && ImGui::GetInputTextState(main->GetID("##script-editor")));
+            for(auto* window:ImGui::GetCurrentContext()->Windows)
+                if(std::string(window->Name).find("ScriptDeck/editor_")==0)assert(!window->Active);
+            io.AddInputCharactersUTF8("function test(){\nreturn 1;\n}");frame();
+            std::string value=kind=="deck"?editing.DeckData().script:kind=="card"?editing.DeckData().cards.front().script:editing.DeckData().cards.front().objects.front().script;
+            assert(value.find("function test")!=std::string::npos&&editing.HasUnsavedChanges());
+            io.AddKeyEvent(ImGuiKey_Tab,true);frame();io.AddKeyEvent(ImGuiKey_Tab,false);frame();
+            value=kind=="deck"?editing.DeckData().script:kind=="card"?editing.DeckData().cards.front().script:editing.DeckData().cards.front().objects.front().script;
+            assert(value.find('\t')!=std::string::npos);
+            io.AddKeyEvent(ImGuiMod_Ctrl,true);io.AddKeyEvent(ImGuiKey_S,true);frame();
+            io.AddKeyEvent(ImGuiKey_S,false);io.AddKeyEvent(ImGuiMod_Ctrl,false);frame();
+            Stack saved;assert(saved.Load(path)&&!editing.HasUnsavedChanges());
+            editing.EndScriptEditor();frame();assert(!editing.IsScriptEditorOpen());
+            editing.BeginScriptEditor(kind,card,objectId);
+            const auto preserved=kind=="deck"?editing.DeckData().script:kind=="card"?editing.DeckData().cards.front().script:editing.DeckData().cards.front().objects.front().script;
+            assert(preserved==value);editing.EndScriptEditor();
+        }
+    }
     ImGui::DestroyContext();std::filesystem::remove(path);
     std::cout<<"PASS: stable console size over 120 frames, close-before-execute/alert, shortcut/input/Run/Enter/Close/Escape, shared runtime, mode switch and card-event suppression; association commands, backup/restore, ownership, rollback and host API\n";
 }

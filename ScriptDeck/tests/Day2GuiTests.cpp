@@ -21,7 +21,7 @@ int main(){
   ScriptEngine js([](const std::string&){},host);js.RunGlobal("globalThis.events=[];","events.js");
   auto frame=[&]{ImGui::NewFrame();view.Draw();ImGui::Render();};
   auto click=[&](float x,float y){io.AddMousePosEvent(x,y);io.AddMouseButtonEvent(0,true);frame();io.AddMouseButtonEvent(0,false);frame();};
-  frame();frame();click(28,30);auto events=view.TakeButtonEvents();assert(events.size()==1&&events[0].handler=="change"&&events[0].checked&&events[0].buttonId==cb);assert(!view.HasUnsavedChanges());
+  frame();frame();click(28,30);auto events=view.TakeButtonEvents();assert(events.size()==1&&events[0].handler=="change"&&events[0].checked&&events[0].buttonId==cb);assert(view.HasUnsavedChanges());
   for(const auto& event:events)js.RunScoped("function change(event){events.push([this.id,event.checked,event.type]);}","change.js","change",event.cardId,event.buttonId,{{"checked",event.checked}});
   click(170,30);auto labelEvents=view.TakeButtonEvents();assert(labelEvents.size()==1&&!labelEvents[0].checked);
   auto* toggleRoot=ImGui::FindWindowByName("ScriptDeck");auto& nav=*ImGui::GetCurrentContext();nav.NavWindow=toggleRoot;

@@ -33,3 +33,20 @@ struct CardObject
 };
 std::string ObjectTypeName(ObjectType type);
 ObjectType ParseObjectType(const std::string& name);
+
+
+inline std::string DefaultDeckScript()
+{
+    return "//ここに記述したものがDeckオープン時に実行されます\n";
+}
+inline std::string DefaultCardScript()
+{
+    return "function openCard(event) {\n}\n\nfunction dropFiles(event) {\n}\n";
+}
+inline std::string DefaultObjectScript(ObjectType type)
+{
+    if(type==ObjectType::Button)return "function mouseUp(event) {\n}\n";
+    if(type==ObjectType::Listbox||type==ObjectType::DropdownList||type==ObjectType::Checkbox||type==ObjectType::RadioButton)
+        return "function change(event) {\n}\n";
+    return "//この部品には専用イベントはありません。\n";
+}

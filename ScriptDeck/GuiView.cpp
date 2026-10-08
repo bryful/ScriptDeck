@@ -76,6 +76,13 @@ bool GuiView::NavigateCard(const std::string& action, const nlohmann::json& targ
     if(ImGui::GetCurrentContext())ImGui::ClearActiveID();
     return true;
 }
+void GuiView::RequestNewDeck()
+{
+    if(pendingDeck_)throw std::runtime_error("A deck change is already pending.");
+    if(dirty_&&path_.empty())throw std::runtime_error("Save the current deck before creating a new deck.");
+    Stack candidate;candidate.CreateNew();
+    pendingDeck_=PendingDeck{std::move(candidate),{},!path_.empty(),true};
+}
 void GuiView::RequestHome(bool saveCurrent)
 {
     RequestDeckChange(EnsureHomeDeck(),saveCurrent);
@@ -112,11 +119,13 @@ bool GuiView::ApplyPendingDeckChange()
     if(request.saveCurrent) {
         if(!stack_.Save(path_))throw std::runtime_error("Cannot save current deck: "+stack_.LastError());
         // Same-path reload must use the version just saved, rather than its previous contents.
-        if(std::filesystem::equivalent(path_,request.path) && !request.data.Load(request.path))
+        if(!request.path.empty() && std::filesystem::equivalent(path_,request.path) && !request.data.Load(request.path))
             throw std::runtime_error("Cannot reload saved deck: "+request.data.LastError());
     }
+    EndScriptEditor();
     stack_=std::move(request.data);path_=std::move(request.path);
     ++scriptGeneration_;buttonEvents_.clear();fileDropEvents_.clear();selected_.clear();status_.clear();dirty_=false;
+    if(request.isNew){dirty_=true;SetMagic(true);}
     drawnCardId_.clear();
     scriptConsoleOpen_=false;consoleCommands_.clear();
     if(ImGui::GetCurrentContext())ImGui::ClearActiveID();
@@ -172,6 +181,7 @@ void GuiView::SetConsoleMode(bool enabled)
 void GuiView::SetMagic(bool enabled)
 {
     if (magic_ == enabled) return;
+    EndScriptEditor();
     magic_ = enabled;
     scriptConsoleOpen_ = false;consoleCommands_.clear();
     test_ = false;
@@ -241,6 +251,15 @@ void GuiView::Toolbar()
     if (ImGui::Button("開く")) Open();
     if (magic_) {
         ImGui::SameLine(); if (ImGui::Button("新規")) New();
+        ImGui::SameLine(); if(ImGui::Button("Homeを開く")) {
+            try {
+                const auto home=EnsureHomeDeck();
+                if(CanClose())RequestDeckChange(home,false);
+            } catch(const std::exception& error) {
+                status_="Home読み込みエラー: "+std::string(error.what());
+                if(services_.reportSaveError)services_.reportSaveError(status_);
+            }
+        }
         ImGui::SameLine(); if (ImGui::Button("保存")) Save(false);
         ImGui::SameLine(); if (ImGui::Button("別名保存")) Save(true);
         ImGui::SameLine(); ImGui::Checkbox("実行プレビュー", &test_);
@@ -437,9 +456,7 @@ void GuiView::Editor()
                 }
             }
         }
-        if (ImGui::TreeNode("部品スクリプト")) {
-            dirty_ |= ImGui::InputTextMultiline("##object-script", &o->script, ImVec2(-1, 140)); ImGui::TreePop();
-        }
+        if(ImGui::Button("部品スクリプトを編集")) {BeginScriptEditor("object",card->id,o->id);return;}
         if (ImGui::Button("部品削除")) {
             const auto id = selected_;
             if (card->enterButtonId == id) card->enterButtonId.clear();
@@ -449,12 +466,8 @@ void GuiView::Editor()
             selected_.clear(); dirty_ = true;
         }
     }
-    if (ImGui::TreeNode("カードスクリプト")) {
-        dirty_ |= ImGui::InputTextMultiline("##card-script", &card->script, ImVec2(-1, 140)); ImGui::TreePop();
-    }
-    if (ImGui::TreeNode("デッキスクリプト")) {
-        dirty_ |= ImGui::InputTextMultiline("##stack-script", &stack_.script, ImVec2(-1, 140)); ImGui::TreePop();
-    }
+    if(ImGui::Button("カードスクリプトを編集")) {BeginScriptEditor("card",card->id);return;}
+    if(ImGui::Button("Deckスクリプトを編集")) {BeginScriptEditor("deck");return;}
     ImGui::TextWrapped("Player／実行プレビューでJavaScriptを実行します。app／fs／alert APIが利用できます。");
 }
 void GuiView::Canvas()
@@ -586,7 +599,15 @@ void GuiView::Canvas()
                 }
                 blockKeyboard |= ImGui::IsItemActive() || (ImGui::IsItemFocused() && ImGui::GetCurrentContext()->NavCursorVisible);
             } else if (o.type == ObjectType::Listbox || o.type == ObjectType::DropdownList) {
-                auto choose = [&](int index) { o.selectedIndex = index; o.text = o.items[static_cast<std::size_t>(index)]; dirty_ = true; };
+                auto choose = [&](int index) {
+                    if(o.selectedIndex==index)return;
+                    ButtonEvent event{card->id,o.id,"change",false,"",scriptGeneration_};
+                    event.previousSelectedIndex=o.selectedIndex;
+                    event.previousSelectedText=o.selectedIndex>=0?o.items[static_cast<std::size_t>(o.selectedIndex)]:"";
+                    o.selectedIndex=index;o.text=o.items[static_cast<std::size_t>(index)];dirty_=true;
+                    event.selectedIndex=index;event.selectedText=o.text;
+                    buttonEvents_.push_back(std::move(event));
+                };
                 if (o.type == ObjectType::Listbox) {
                     if (ImGui::BeginListBox("##listbox", extent)) {
                         for (std::size_t i = 0; i < o.items.size(); ++i) {
@@ -691,6 +712,64 @@ void GuiView::DrawScriptConsole()
         ImGui::EndPopup();
     }
 }
+std::string* GuiView::EditingScript()
+{
+    if(scriptEditorKind_=="deck")return &stack_.script;
+    auto* card=stack_.FindCard(scriptEditorCard_);
+    if(!card)return nullptr;
+    if(scriptEditorKind_=="card")return &card->script;
+    auto* object=card->FindObject(scriptEditorObject_);
+    return object?&object->script:nullptr;
+}
+void GuiView::BeginScriptEditor(const std::string& kind,const std::string& cardId,const std::string& objectId)
+{
+    if(!magic_ || test_)throw std::runtime_error("Script editing requires Magic edit mode.");
+    if(kind!="deck" && kind!="card" && kind!="object")throw std::invalid_argument("Invalid script target.");
+    scriptEditorKind_=kind;scriptEditorCard_=cardId;scriptEditorObject_=objectId;
+    auto* script=EditingScript();
+    if(!script)throw std::invalid_argument("Script target was not found.");
+    if(script->find_first_not_of(" \t\r\n")==std::string::npos) {
+        if(kind=="card") { *script=DefaultCardScript();dirty_=true; }
+        else if(kind=="deck") { *script=DefaultDeckScript();dirty_=true; }
+        else { *script=DefaultObjectScript(stack_.FindCard(cardId)->FindObject(objectId)->type);dirty_=true; }
+    }
+    scriptEditorTitle_=kind=="deck"?"Deck: "+stack_.name:kind=="card"?"カード: "+stack_.FindCard(cardId)->name:"部品: "+stack_.FindCard(cardId)->FindObject(objectId)->name;
+    scriptEditing_=true;scriptEditorFocus_=true;
+    buttonEvents_.clear();fileDropEvents_.clear();
+    if(ImGui::GetCurrentContext())ImGui::ClearActiveID();
+}
+void GuiView::EndScriptEditor()
+{
+    scriptEditing_=false;scriptEditorFocus_=false;
+    if(ImGui::GetCurrentContext())ImGui::ClearActiveID();
+}
+void GuiView::DrawScriptEditor()
+{
+    auto* script=EditingScript();
+    if(!script){EndScriptEditor();return;}
+    if(ImGui::Button("編集を完了")){EndScriptEditor();return;}
+    ImGui::SameLine();
+    bool save=ImGui::Button("保存");
+    ImGui::SameLine();bool saveAs=ImGui::Button("別名保存");
+    ImGui::SameLine();ImGui::TextUnformatted(scriptEditorTitle_.c_str());
+    ImGui::Separator();
+    if(services_.scriptFont)ImGui::PushFont(services_.scriptFont);
+    if(scriptEditorFocus_) {
+        ImGui::SetWindowFocus();
+        // AllowTabInput rejects tab-navigation activation, including SetKeyboardFocusHere.
+        auto& context=*ImGui::GetCurrentContext();
+        context.NavActivateId=ImGui::GetID("##script-editor");
+        context.NavActivateFlags=ImGuiActivateFlags_PreferInput;
+    }
+    // Live edits keep close confirmation, Ctrl+S and file saves consistent.
+    dirty_ |= ImGui::InputTextMultiline("##script-editor",script,ImGui::GetContentRegionAvail(),ImGuiInputTextFlags_AllowTabInput);
+    if(ImGui::IsItemActive())scriptEditorFocus_=false;
+    if(services_.scriptFont)ImGui::PopFont();
+    if(ImGui::GetIO().KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_S,false)) {
+        save=true;saveAs=ImGui::GetIO().KeyShift;
+    }
+    if(save||saveAs)Save(saveAs);
+}
 void GuiView::Draw()
 {
     if(!magic_ && ImGui::GetIO().KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_Space,false)) {
@@ -714,6 +793,9 @@ void GuiView::Draw()
         DrawScriptConsole();
         return;
     }
+    if(scriptEditing_) {
+        DrawScriptEditor();ImGui::End();return;
+    }
     if (ImGui::GetIO().KeyCtrl) {
         if (ImGui::IsKeyPressed(ImGuiKey_O, false)) Open();
         if (magic_ && ImGui::IsKeyPressed(ImGuiKey_S, false)) Save(ImGui::GetIO().KeyShift);
@@ -724,7 +806,9 @@ void GuiView::Draw()
         ImGui::BeginChild("editor", ImVec2(340,0), ImGuiChildFlags_Borders); Editor(); ImGui::EndChild();
         ImGui::SameLine();
     }
-    ImGui::BeginChild("canvas-pane", ImVec2(0,0)); Canvas(); ImGui::EndChild();
+    ImGui::BeginChild("canvas-pane", ImVec2(0,0));
+    if(scriptEditing_)DrawScriptEditor();else Canvas();
+    ImGui::EndChild();
     ImGui::End();
     DrawScriptConsole();
 }

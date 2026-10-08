@@ -1,12 +1,14 @@
 # カードとDeckの移動
 
+更新日：2026-10-08
+
 PlayerとMagicの実行プレビューで利用できます。グローバル関数と `app` のメソッドは同じ動作です。
 
 ## 起動時のHome
 
 Deckを指定せずに起動すると、Player／Magicともに `%LOCALAPPDATA%\ScriptDeck\home.deck` を開きます。
 
-ファイルがなければ、実行ファイル内のRCDATAリソース `assets/home.deck` から初期Homeを保存して開きます。初期HomeにはDeckを選んで開くボタンがあります。Homeを編集・保存した後は、その内容を使います。存在するHomeが壊れている場合はエラーを表示し、自動上書きしません。
+ファイルがなければ、実行ファイル内のRCDATAリソース `assets/home.deck` から初期Homeを保存して開きます。初期Homeには「Open Deck」と「新規Deck」のボタンがあります。新規Deckは未保存のDeckを作成してMagicへ切り替えます。Homeを編集・保存した後は、その内容を使います。存在するHomeが壊れている場合はエラーを表示し、自動上書きしません。
 
 ## カード移動
 
@@ -63,13 +65,6 @@ changeDeck("next.deck");
 
 Playerのカードサイズ・タイトルと、Deck別の位置設定も更新します。Homeの位置設定もHome自身のパスで識別します。TopMostの状態はDeck切り替えで維持します。
 
-## 更新ファイル
-
-`ScriptEngine.h`、`ScriptEngine.cpp`、`GuiView.h`、`GuiView.cpp`、`GuiWindow.cpp`、`HomeDeck.h`、`ResourceIds.h`、`ScriptDeck.rc`、`assets/home.deck`、`ScriptDeck.vcxproj`、`CMakeLists.txt`。
-
-Resourceとプロジェクトの追加があるため、ZIPのプロジェクト一式を更新してリビルドしてください。
-
-
 ## Deckファイルの読み込み・保存
 
 グローバル関数と `app` メソッドの両方で利用できます。
@@ -100,3 +95,11 @@ openDeckは指定ファイルを先に検証し、失敗時は現在のDeckを�
 - `-magic`：指定パスに初期Deckを作成・保存して編集画面を開きます。作成できなければエラー終了します。
 - ファイルが存在するがJSONが壊れている場合：両モードともエラー終了します。上書きしません。
 - Deck引数を省略した場合：従来どおりAppDataのHomeを開き、なければ内蔵Homeを保存して開きます。
+
+
+## 新規Deck
+
+`app.newDeck()` / `newDeck()` は現在のDeckを保存し、新しい未保存Deckを作ってMagicへ切り替えます。切り替えはイベント処理後です。現在のDeckが未保存かつ保存先がない場合は例外になるため、先にsaveDeck(path)／saveAsDeck()で保存してください。保存に失敗した場合も現在のDeckを維持します。新規Deckは「保存」で保存先を指定します。
+
+
+Magicの「Homeを開く」はMagicのまま移動します。未保存なら破棄確認を表示するUI操作で、既定で保存するスクリプトのgoHome()とは保存の扱いが異なります。内蔵Homeの更新で、既存のAppData内のhome.deckを自動上書きすることはありません。
