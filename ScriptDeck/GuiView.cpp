@@ -359,9 +359,9 @@ void GuiView::Editor()
     keyboardButton("Escapeボタン", card->escapeButtonId);
     ImGui::SeparatorText("部品を追加");
     const ObjectType types[] = {ObjectType::Button, ObjectType::Field, ObjectType::Text, ObjectType::Image,
-        ObjectType::Listbox, ObjectType::DropdownList, ObjectType::InputBox, ObjectType::Checkbox, ObjectType::RadioButton};
-    for (int i = 0; i < 9; ++i) {
-        if (i && i != 4 && i != 7) ImGui::SameLine();
+        ObjectType::Listbox, ObjectType::DropdownList, ObjectType::InputBox, ObjectType::Checkbox, ObjectType::RadioButton, ObjectType::TextEditor};
+    for (int i = 0; i < static_cast<int>(sizeof(types)/sizeof(types[0])); ++i) {
+        if (i && i != 4 && i != 7 && i != 9) ImGui::SameLine();
         if (ImGui::Button(ObjectTypeName(types[i]).c_str())) {
             selected_ = stack_.AddObject(card->id, types[i], ObjectTypeName(types[i])).id; dirty_ = true;
         }
@@ -580,10 +580,14 @@ void GuiView::Canvas()
                 draw->AddText(ImVec2(pos.x+(extent.x-textSize.x)/2, pos.y+(extent.y-textSize.y)/2),
                     o.textColor ? ImGui::GetColorU32(ImGuiCol_Text) :
                     o.enabled ? IM_COL32(255,255,255,255) : IM_COL32(150,150,150,255), o.text.c_str());
-            } else if (o.type == ObjectType::Field || o.type == ObjectType::InputBox) {
-                const auto id = ImGui::GetID(o.type == ObjectType::Field ? "##field" : "##inputbox");
+            } else if (o.type == ObjectType::Field || o.type == ObjectType::InputBox || o.type == ObjectType::TextEditor) {
+                const auto id = ImGui::GetID(o.type == ObjectType::Field ? "##field" : o.type == ObjectType::TextEditor ? "##texteditor" : "##inputbox");
                 blockKeyboard |= ImGui::GetCurrentContext()->ActiveId == id;
-                if (o.type == ObjectType::Field) {
+                if (o.type == ObjectType::TextEditor) {
+                    if (services_.scriptFont) ImGui::PushFont(services_.scriptFont);
+                    if (ImGui::InputTextMultiline("##texteditor", &o.text, extent, ImGuiInputTextFlags_AllowTabInput)) dirty_ = true;
+                    if (services_.scriptFont) ImGui::PopFont();
+                } else if (o.type == ObjectType::Field) {
                     if (ImGui::InputTextMultiline("##field", &o.text, extent)) dirty_ = true;
                 } else {
                     // このInputBoxの処理中だけReturnを無視し、フォーカスと選択を維持する。

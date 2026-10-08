@@ -1,0 +1,290 @@
+{
+  "cards": [
+    {
+      "backgroundColor": [
+        0.9300000071525574,
+        0.9599999785423279,
+        1.0,
+        1.0
+      ],
+      "enterButtonId": "object1",
+      "escapeButtonId": "",
+      "id": "card1",
+      "name": "Builtins",
+      "objects": [
+        {
+          "backgroundColor": [
+            0.1599999964237213,
+            0.3499999940395355,
+            0.6200000047683716,
+            1.0
+          ],
+          "borderColor": [
+            0.07999999821186066,
+            0.1899999976158142,
+            0.3700000047683716,
+            1.0
+          ],
+          "enabled": true,
+          "height": 50,
+          "id": "object1",
+          "imagePath": "",
+          "imageSource": "file",
+          "items": [],
+          "name": "引数",
+          "resourceId": "",
+          "script": "alert(app.getArgs());",
+          "selectedIndex": -1,
+          "text": "引数",
+          "textColor": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "tintColor": null,
+          "type": "button",
+          "visible": true,
+          "width": 240,
+          "x": 30,
+          "y": 80,
+          "checked": false,
+          "group": ""
+        },
+        {
+          "backgroundColor": [
+            0.1599999964237213,
+            0.3499999940395355,
+            0.6200000047683716,
+            1.0
+          ],
+          "borderColor": [
+            0.07999999821186066,
+            0.1899999976158142,
+            0.3700000047683716,
+            1.0
+          ],
+          "enabled": true,
+          "height": 50,
+          "id": "object2",
+          "imagePath": "",
+          "imageSource": "file",
+          "items": [],
+          "name": "runCode",
+          "resourceId": "",
+          "script": "alert(app.runCode(\"twice(15)\"));",
+          "selectedIndex": -1,
+          "text": "runCode",
+          "textColor": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "tintColor": null,
+          "type": "button",
+          "visible": true,
+          "width": 240,
+          "x": 300,
+          "y": 80,
+          "checked": false,
+          "group": ""
+        },
+        {
+          "backgroundColor": [
+            0.1599999964237213,
+            0.3499999940395355,
+            0.6200000047683716,
+            1.0
+          ],
+          "borderColor": [
+            0.07999999821186066,
+            0.1899999976158142,
+            0.3700000047683716,
+            1.0
+          ],
+          "enabled": true,
+          "height": 50,
+          "id": "object3",
+          "imagePath": "",
+          "imageSource": "file",
+          "items": [],
+          "name": "BOMファイル",
+          "resourceId": "",
+          "script": "fs.writeText(\"ScriptDeck_test_bom.txt\", \"日本語テスト\", true);\nfs.writeText(\"ScriptDeck_test_plain.txt\", \"日本語テスト\", false);\nalert({bom: fs.readText(\"ScriptDeck_test_bom.txt\"), plain: fs.readText(\"ScriptDeck_test_plain.txt\")});",
+          "selectedIndex": -1,
+          "text": "BOMファイル",
+          "textColor": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "tintColor": null,
+          "type": "button",
+          "visible": true,
+          "width": 240,
+          "x": 30,
+          "y": 160,
+          "checked": false,
+          "group": ""
+        },
+        {
+          "backgroundColor": [
+            0.1599999964237213,
+            0.3499999940395355,
+            0.6200000047683716,
+            1.0
+          ],
+          "borderColor": [
+            0.07999999821186066,
+            0.1899999976158142,
+            0.3700000047683716,
+            1.0
+          ],
+          "enabled": true,
+          "height": 50,
+          "id": "object4",
+          "imagePath": "",
+          "imageSource": "file",
+          "items": [],
+          "name": "標準出力",
+          "resourceId": "",
+          "script": "app.writeLine(JSON.stringify({message: \"標準出力テスト\", args: app.getArgs()}));",
+          "selectedIndex": -1,
+          "text": "標準出力",
+          "textColor": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "tintColor": null,
+          "type": "button",
+          "visible": true,
+          "width": 240,
+          "x": 300,
+          "y": 160,
+          "checked": false,
+          "group": ""
+        },
+        {
+          "backgroundColor": [
+            0.1599999964237213,
+            0.3499999940395355,
+            0.6200000047683716,
+            1.0
+          ],
+          "borderColor": [
+            0.07999999821186066,
+            0.1899999976158142,
+            0.3700000047683716,
+            1.0
+          ],
+          "enabled": true,
+          "height": 50,
+          "id": "object5",
+          "imagePath": "",
+          "imageSource": "file",
+          "items": [],
+          "name": "Beep",
+          "resourceId": "",
+          "script": "app.beep();",
+          "selectedIndex": -1,
+          "text": "Beep",
+          "textColor": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "tintColor": null,
+          "type": "button",
+          "visible": true,
+          "width": 240,
+          "x": 30,
+          "y": 240,
+          "checked": false,
+          "group": ""
+        },
+        {
+          "backgroundColor": [
+            0.1599999964237213,
+            0.3499999940395355,
+            0.6200000047683716,
+            1.0
+          ],
+          "borderColor": [
+            0.07999999821186066,
+            0.1899999976158142,
+            0.3700000047683716,
+            1.0
+          ],
+          "enabled": true,
+          "height": 50,
+          "id": "object6",
+          "imagePath": "",
+          "imageSource": "file",
+          "items": [],
+          "name": "Magicへ切替",
+          "resourceId": "",
+          "script": "app.setMagic(true);",
+          "selectedIndex": -1,
+          "text": "Magicへ切替",
+          "textColor": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "tintColor": null,
+          "type": "button",
+          "visible": true,
+          "width": 240,
+          "x": 300,
+          "y": 240,
+          "checked": false,
+          "group": ""
+        },
+        {
+          "backgroundColor": null,
+          "borderColor": null,
+          "enabled": true,
+          "height": 35,
+          "id": "object7",
+          "imagePath": "",
+          "imageSource": "file",
+          "items": [],
+          "name": "text",
+          "resourceId": "",
+          "script": "",
+          "selectedIndex": -1,
+          "text": "組み込み関数の確認用デッキ",
+          "textColor": [
+            0.11999999731779099,
+            0.23999999463558197,
+            0.4399999976158142,
+            1.0
+          ],
+          "tintColor": null,
+          "type": "text",
+          "visible": true,
+          "width": 560,
+          "x": 30,
+          "y": 20,
+          "checked": false,
+          "group": ""
+        }
+      ],
+      "script": ""
+    }
+  ],
+  "currentCardId": "card1",
+  "format": "ScriptDeck",
+  "height": 480,
+  "name": "ScriptDeck Builtin Test",
+  "script": "function twice(value) { return value * 2; }",
+  "startupPlacement": "default",
+  "version": 1,
+  "width": 640
+}

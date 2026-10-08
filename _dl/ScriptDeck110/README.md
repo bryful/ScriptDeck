@@ -12,7 +12,7 @@
 
 - カードと部品の作成・編集、並べ替え、色の指定。
 - Magicで作業領域全体を使うスクリプト編集画面。Tab入力・Ctrl+S保存に対応。
-- Button、Field、Text、Image、Listbox、DropdownList、InputBox、Checkbox、RadioButton。
+- Button、Field、Text、Image、Listbox、DropdownList、InputBox、Checkbox、RadioButton、TextEditor。
 - JavaScriptから部品のプロパティ操作、動的な作成・削除、カード・Deckの移動。
 - 外部画像と内蔵画像リソースの表示。
 - ボタン、状態変更、カード表示、複数ファイルのドロップに対応するイベント。

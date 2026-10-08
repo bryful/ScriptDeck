@@ -1,0 +1,100 @@
+{
+  "cards": [
+    {
+      "backgroundColor": [
+        0.9399999976158142,
+        0.9599999785423279,
+        0.9800000190734863,
+        1.0
+      ],
+      "enterButtonId": "run",
+      "escapeButtonId": "",
+      "id": "card1",
+      "name": "CodeRunner",
+      "objects": [
+        {
+          "backgroundColor": [
+            0.1599999964237213,
+            0.3499999940395355,
+            0.6200000047683716,
+            1.0
+          ],
+          "borderColor": [
+            0.07999999821186066,
+            0.1899999976158142,
+            0.3700000047683716,
+            1.0
+          ],
+          "checked": false,
+          "enabled": true,
+          "group": "",
+          "height": 40.0,
+          "id": "run",
+          "imagePath": "",
+          "imageSource": "file",
+          "items": [],
+          "name": "run",
+          "resourceId": "",
+          "script": "function mouseUp(event) {\n    app.runCode(this.card.objectByName(\"texteditor\").text);\n}\n",
+          "selectedIndex": -1,
+          "text": "run",
+          "textColor": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "tintColor": null,
+          "type": "button",
+          "visible": true,
+          "width": 120.0,
+          "x": 660.0,
+          "y": 530.0
+        },
+        {
+          "backgroundColor": [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ],
+          "borderColor": null,
+          "checked": false,
+          "enabled": true,
+          "group": "",
+          "height": 502.0,
+          "id": "object1",
+          "imagePath": "",
+          "imageSource": "file",
+          "items": [],
+          "name": "texteditor",
+          "resourceId": "",
+          "script": "//この部品には専用イベントはありません。\n",
+          "selectedIndex": -1,
+          "text": "// JavaScriptコードを入力してrunボタンで実行します。\napp.writeLine(\"Hellow\");\n\nfor(var i=0; i<10;i++)\n{\n    app.writeLine(i+\"\");\n}\n\nalert(\"Hello, ScriptDeck!\");\n",
+          "textColor": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "tintColor": null,
+          "type": "texteditor",
+          "visible": true,
+          "width": 756.0,
+          "x": 20.0,
+          "y": 20.0
+        }
+      ],
+      "script": "function openCard(event) {\n}\n\nfunction dropFiles(event) {\n}\n"
+    }
+  ],
+  "currentCardId": "card1",
+  "format": "ScriptDeck",
+  "height": 590,
+  "name": "CodeRunner",
+  "script": "// ここに記述したものがDeckオープン時に実行されます。\n",
+  "startupPlacement": "center",
+  "version": 1,
+  "width": 800
+}

@@ -48,6 +48,7 @@ std::string ObjectTypeName(ObjectType type)
     switch (type) {
     case ObjectType::Button: return "button";
     case ObjectType::Field: return "field";
+    case ObjectType::TextEditor: return "texteditor";
     case ObjectType::Text: return "text";
     case ObjectType::Image: return "image";
     case ObjectType::Listbox: return "listbox";
@@ -62,6 +63,7 @@ ObjectType ParseObjectType(const std::string& name)
 {
     if (name == "button") return ObjectType::Button;
     if (name == "field") return ObjectType::Field;
+    if (name == "texteditor") return ObjectType::TextEditor;
     if (name == "text") return ObjectType::Text;
     if (name == "image") return ObjectType::Image;
     if (name == "listbox") return ObjectType::Listbox;
@@ -145,6 +147,7 @@ CardObject& Stack::AddObject(const std::string& cardId, ObjectType type,
         o.width = 180; o.height = type == ObjectType::Listbox ? 120 : 32;
     }
     if (type == ObjectType::InputBox) { o.width = 180; o.text.clear(); }
+    if (type == ObjectType::TextEditor) { o.width = 400; o.height = 240; o.text.clear(); }
     c->objects.push_back(std::move(o));
     return c->objects.back();
 }

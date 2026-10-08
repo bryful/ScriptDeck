@@ -7,7 +7,7 @@
 // RGBA、各成分0～1。未指定は従来の表示色を使用する。
 using DeckColor = std::array<float, 4>;
 
-enum class ObjectType { Button, Field, Text, Image, Listbox, DropdownList, InputBox, Checkbox, RadioButton };
+enum class ObjectType { Button, Field, Text, Image, Listbox, DropdownList, InputBox, Checkbox, RadioButton, TextEditor };
 
 struct CardObject
 {

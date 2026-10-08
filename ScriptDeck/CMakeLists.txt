@@ -26,6 +26,16 @@ endif()
 include(CTest)
 if(BUILD_TESTING)
     find_package(Threads REQUIRED)
+    add_executable(TextEditorTests tests/TextEditorTests.cpp GuiView.cpp LaunchOptions.cpp
+        imgui/imgui.cpp imgui/imgui_draw.cpp imgui/imgui_tables.cpp imgui/imgui_widgets.cpp
+        imgui/misc/cpp/imgui_stdlib.cpp)
+    target_include_directories(TextEditorTests PRIVATE imgui imgui/misc/cpp)
+    target_link_libraries(TextEditorTests PRIVATE scriptdeck_script)
+    if(MSVC)
+        target_compile_options(TextEditorTests PRIVATE /utf-8)
+        target_link_options(TextEditorTests PRIVATE /STACK:8388608)
+    endif()
+    add_test(NAME TextEditorTests COMMAND TextEditorTests)
     add_executable(Version1Tests tests/Version1Tests.cpp GuiView.cpp LaunchOptions.cpp
         imgui/imgui.cpp imgui/imgui_draw.cpp imgui/imgui_tables.cpp imgui/imgui_widgets.cpp
         imgui/misc/cpp/imgui_stdlib.cpp)
