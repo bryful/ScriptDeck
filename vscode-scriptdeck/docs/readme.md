@@ -2,7 +2,7 @@
 
 更新日：2026-10-12
 
-[プロジェクト概要・ビルド](../README.md)
+[ScriptDeckの使い方・VSCode拡張のインストール](../README.md)
 
 ## 使い方とファイル形式
 
@@ -30,6 +30,7 @@ VSCode拡張のインストール、8つのコマンド、ScriptDeck.exeの登�
 ## 開発・ライセンス
 
 - [変更履歴](HISTORY.md)：現在の更新・検証と、過去の実装記録。
-- [ルートREADME](../README.md)：概要、ビルド、起動例、サンプル。
+- [開発ガイド](DEVELOPMENT.md)：ビルド、テスト、ソース構成、VSCode拡張のパッケージ作成。
+- [ルートREADME](../README.md)：利用者向けの概要、VSCode拡張のインストール、起動例、サンプル。
 - [LICENSE](../LICENSE)：ScriptDeck本体のMITライセンス。
 - [THIRD_PARTY_NOTICES](../THIRD_PARTY_NOTICES.md)：第三者コード・データの著作権表示とライセンス。

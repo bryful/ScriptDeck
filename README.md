@@ -8,6 +8,22 @@ ScriptDeckは、HyperCardに着想を得たWindows向けのカード型アプリ
 カードにボタン・入力欄・画像などを配置し、JavaScriptで動作を記述します。
 Playerで実行し、Magicで画面やプロパティを編集します。
 
+## VSCode機能拡張のインストール
+
+Folder DeckのコードをVSCodeで編集する場合は、ScriptDeck拡張をインストールしてください。
+
+1. [ScriptDeck拡張のVSIX](vscode-scriptdeck/scriptdeck-0.1.1.vsix)を保存します。
+2. VSCodeを開き、左側の「拡張機能」を選択します（`Ctrl+Shift+X`）。
+3. 拡張機能画面の「…」から「VSIXからのインストール…」を選び、保存した`scriptdeck-0.1.1.vsix`を指定します。再読み込みを求められた場合は実行してください。
+4. `Ctrl+Shift+P`でコマンドパレットを開き、「ScriptDeck: ScriptDeck.exeを登録」を実行して、使用する`ScriptDeck.exe`を選びます。
+5. VSCodeの「ファイル」→「フォルダーを開く」で、編集する`main.deck`のあるフォルダーを開きます。
+
+実行ファイルのパスが未設定の場合は、新規作成・再生・Magic・エクスポート時にも選択ダイアログを表示します。キャンセルすると操作を中止します。登録したパスは設定に保存され、次回から使用します。実行ファイルを移動した場合は登録コマンドで選び直してください。
+
+コマンドパレットから再生・Magic・終了・deck/deckxへのエクスポートを操作できます。エクスプローラーのScriptDeckツリーから外部JSを開き、API補完やホバー説明を利用できます。
+
+コードはScriptDeckを終了してから編集し、再生し直して確認してください。新しいFolder Deckは「ScriptDeck: 新規フォルダーデッキ」で作成できます。詳しくは[VSCode拡張の操作説明](vscode-scriptdeck/README.md)を参照してください。
+
 ## 保存形式と制作方法
 
 | 形式 | 用途 | コード編集 |
@@ -55,28 +71,7 @@ ScriptDeck.exe -run example.deckx validate
 通常起動でDeck未指定の場合は`%LOCALAPPDATA%\ScriptDeck\home.deck`を開きます。
 Homeがなければ内蔵データから作成し、既存Homeは上書きしません。
 Player終了時は変更を自動保存し、保存失敗時は終了を止めます。Magicは未保存の破棄確認を表示します。
-`-run`は情報取得・JSON出力・検証・コピー・deckxへのExport用で、DeckのJavaScriptは実行しません。
-
-## ビルドとテスト
-
-GUIはWindows x64向けです。Dear ImGui、Direct3D 11、QuickJS-NGを使用します。
-依存ライブラリのソースは同梱しています。日本語表示にはWindowsのMeiryoを使用します。
-
-1. Visual Studio 2026に「C++によるデスクトップ開発」とWindows SDKをインストールします。
-2. `ScriptDeck.slnx`を開きます（ツールセットv145）。
-3. Release / x64を選んでリビルドします。
-4. `ScriptDeck/bin/x64/Release/ScriptDeck.exe`を実行します。
-
-CMakeでテストする場合：
-
-```sh
-cmake -S ScriptDeck -B build -DBUILD_TESTING=ON
-cmake --build build --config Debug
-ctest --test-dir build -C Debug --output-on-failure --timeout 30
-```
-
-GUIはWindows専用です。非Windows向けにもCLI・モデル・JavaScript・ヘッドレスGUIテストを含みます。
-今回のWindowsでの検証内容は[変更履歴](doc/HISTORY.md)を参照してください。
+`-run`は情報取得・JSON出力・検証・コピー・deck/deckxへのExport用で、DeckのJavaScriptは実行しません。
 
 ## ドキュメントとサンプル
 
@@ -87,7 +82,7 @@ GUIはWindows専用です。非Windows向けにもCLI・モデル・JavaScript�
 - [JavaScript・イベント](doc/SCRIPT_API.md)：コードの実行タイミングとイベント。
 - [変更履歴](doc/HISTORY.md)：実装と検証の記録。
 
-ソース・プロジェクト・テストは`ScriptDeck/`、サンプルDeckは`sampleDeck/`、説明書は`doc/`にあります。
+サンプルDeckは`sampleDeck/`にあります。ビルド・テスト・拡張のパッケージ作成については[開発ガイド](doc/DEVELOPMENT.md)を参照してください。
 
 ## ライセンス
 
@@ -105,9 +100,3 @@ ScriptDeck本体は **MIT License** で公開します。著作権表示は `Cop
 | nlohmann/json 3.12.0 | MIT |
 
 著作権表示とライセンス全文・帰属情報は [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) にまとめています。バイナリーを配布する場合も、`LICENSE` と `THIRD_PARTY_NOTICES.md` を同梱してください。
-
-## VSCode拡張
-
-Folder Deckのコード編集用に[VSCode拡張](vscode-scriptdeck/README.md)を用意しています。再生・Magic・エクスポート、Deckツリー、API補完に対応します。
-
-VSIXをインストール後、「ScriptDeck: ScriptDeck.exeを登録」で実行ファイルを選択してください。`scriptdeck.executablePath`が未設定なら、新規作成・再生・Magic・エクスポート時に選択ダイアログを表示します。キャンセルした場合は操作を中止します。
