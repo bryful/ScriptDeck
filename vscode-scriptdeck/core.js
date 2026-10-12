@@ -12,5 +12,5 @@ function readDeck(text) {
   if (deck.format !== 'ScriptDeck' || deck.storage !== 'folder' || !Array.isArray(deck.cards)) throw Error('Folder形式のmain.deckを選択してください。');
   return deck;
 }
-function launchArgs(mode, root) { return mode === 'magic' ? ['--magicFolder', root] : [root]; }
+function launchArgs(mode, root) { return mode === 'magic' ? ['--magicFolder', '--vscode', root] : [root]; }
 module.exports = {scriptPath, readDeck, launchArgs};

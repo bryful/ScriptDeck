@@ -1,7 +1,7 @@
 const {test}=require('node:test');const assert=require('node:assert/strict');const Module=require('node:module');const fs=require('node:fs');const os=require('node:os');const path=require('node:path');const {EventEmitter}=require('node:events');
 test('Extension activates, builds tree, completes APIs, and saves before launch',async()=>{
  const root=fs.mkdtempSync(path.join(os.tmpdir(),'ScriptDeck 拡張 '));fs.mkdirSync(path.join(root,'script'));
- const main=path.join(root,'main.deck');fs.writeFileSync(main,JSON.stringify({format:'ScriptDeck',storage:'folder',name:'確認',scriptFile:'script/deck.js',cards:[{id:'c',name:'カード',scriptFile:'script/カード.js',objects:[{id:'b',name:'ボタン',type:'button',scriptFile:'script/カード_ボタン.js'}]}]}));
+ const main=path.join(root,'main.deck');fs.writeFileSync(main,JSON.stringify({format:'ScriptDeck',storage:'folder',name:'確認',scriptFile:'script/deck.js',cards:[{id:'c',name:'カード',scriptFile:'script/カード.js',objects:[{id:'b',name:'ボタン',type:'button',scriptFile:'script/カード_ボタン.js'},{id:'t',name:'表示',type:'text'}]}]}));
  const handlers={};let tree,completion,hover,spawned,saved=false;const messages=[];let child;
  const disposable={dispose(){}};const uri=f=>({fsPath:f,scheme:'file'});
  const vscode={EventEmitter:class{constructor(){this.event=()=>disposable;}fire(){}dispose(){}},TreeItem:class{constructor(label,state){this.label=label;this.collapsibleState=state;}},TreeItemCollapsibleState:{Collapsed:1,None:0},CompletionItem:class{constructor(label,kind){this.label=label;this.kind=kind;}},CompletionItemKind:{Method:1,Property:2,Module:3,Value:4},MarkdownString:class{constructor(value){this.value=value;}},Hover:class{constructor(contents){this.contents=contents;}},Uri:{file:uri,joinPath:(u,...parts)=>uri(path.join(u.fsPath,...parts))},window:{activeTextEditor:undefined,createOutputChannel:()=>({append(){},appendLine(){},dispose(){}}),registerTreeDataProvider:(_id,t)=>{tree=t;return disposable;},showErrorMessage:m=>messages.push(m),showInformationMessage:m=>messages.push(m),showWarningMessage:m=>messages.push(m)},workspace:{findFiles:async()=>[uri(main)],saveAll:async()=>{saved=true;return true;},getConfiguration:()=>({get:()=> 'C:\\Program Files\\ScriptDeck.exe'}),createFileSystemWatcher:()=>({onDidChange:()=>disposable,onDidCreate:()=>disposable,onDidDelete:()=>disposable,dispose(){}}),onDidChangeWorkspaceFolders:()=>disposable,onDidChangeTextDocument:()=>disposable},commands:{registerCommand:(id,fn)=>{handlers[id]=fn;return disposable;}},languages:{registerCompletionItemProvider:(_s,p)=>{completion=p;return disposable;},registerHoverProvider:(_s,p)=>{hover=p;return disposable;}}};
@@ -9,8 +9,16 @@ test('Extension activates, builds tree, completes APIs, and saves before launch'
  const original=Module._load;Module._load=function(name,...args){if(name==='vscode')return vscode;if(name==='child_process')return cp;return original.call(this,name,...args);};
  try{
   delete require.cache[require.resolve('../extension')];require('../extension').activate({subscriptions:[],extensionUri:uri(path.resolve(__dirname,'..'))});assert.equal(Object.keys(handlers).length,8);
-  const roots=await tree.getChildren();assert.equal(roots[0].label,'確認');const nodes=await tree.getChildren(roots[0]);assert.equal(nodes[0].command.arguments[0].fsPath,path.join(root,'script/deck.js'));assert.equal(nodes[1].children[1].label,'ボタン (button)');
+  const roots=await tree.getChildren();assert.equal(roots[0].label,'確認');const nodes=await tree.getChildren(roots[0]);assert.equal(nodes[0].command.arguments[0].fsPath,path.join(root,'script/deck.js'));assert.equal(nodes[1].children[1].label,'ボタン (button)');assert.equal(nodes[1].children[2].label,'表示 (text)');assert.equal(nodes[1].children[2].command,undefined);
   const doc={uri:uri(path.join(root,'script/deck.js')),lineAt:()=>({text:'app.'})};assert.ok((await completion.provideCompletionItems(doc,{character:4})).some(x=>x.label==='writeLine'));
+  // Files must complete even when workspace search returns no Decks.
+  const findFiles=vscode.workspace.findFiles;vscode.workspace.findFiles=async()=>[];
+  doc.lineAt=()=>({text:'fs.'});
+  let suggestions=await completion.provideCompletionItems(doc,{character:3});
+  assert.ok(suggestions.some(x=>x.label==='readText'));assert.ok(suggestions.some(x=>x.label==='writeText'));
+  doc.lineAt=()=>({text:'fs.rea'});suggestions=await completion.provideCompletionItems(doc,{character:6});assert.ok(suggestions.some(x=>x.label==='readText'));
+  doc.lineAt=()=>({text:'f'});assert.ok((await completion.provideCompletionItems(doc,{character:1})).some(x=>x.label==='fs'));
+  vscode.workspace.findFiles=findFiles;
   doc.getWordRangeAtPosition=()=>({});doc.getText=()=> 'app.writeLine';assert.ok(await hover.provideHover(doc,{}));
   await handlers['scriptdeck.play']();assert.deepEqual(spawned.args,[root]);assert.equal(spawned.options.shell,false);
   await handlers['scriptdeck.magic']();assert.ok(messages.some(m=>m.includes('起動中')));child.emit('close',0);

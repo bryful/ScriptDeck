@@ -17,13 +17,76 @@ int main(){
  auto root=std::filesystem::temp_directory_path()/("scriptdeck-folder-"+std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
  std::filesystem::create_directories(root);
  try {
+  {
+   Stack selective;selective.CreateFolder(root/"Selective");const auto cardId=selective.currentCardId;
+   const ObjectType types[]={ObjectType::Button,ObjectType::Checkbox,ObjectType::RadioButton,ObjectType::Listbox,ObjectType::DropdownList,ObjectType::Field,ObjectType::Text,ObjectType::Image,ObjectType::InputBox,ObjectType::TextEditor};
+   for(auto type:types){
+    const auto object=selective.AddObject(cardId,type,ObjectTypeName(type));
+    Check(object.scriptFile.empty()!=HasObjectScriptEvent(type),"Only event objects have external script refs");
+    const auto expected=selective.folderRoot/"script"/PathFromUtf8("Card 1_"+object.name+".js");
+    Check(std::filesystem::exists(expected)==HasObjectScriptEvent(type),"Only event objects create JS files");
+   }
+   const auto textId=selective.FindCard(cardId)->objects[6].id;
+   const auto duplicated=selective.DuplicateObject(cardId,textId).id;
+   Check(selective.FindCard(cardId)->FindObject(duplicated)->scriptFile.empty(),"Passive duplicate has no JS");
+   selective.Rename("object",cardId,textId,"RenamedText");
+   selective.Rename("card",cardId,{},"RenamedCard");
+   Stack reloaded;Check(reloaded.Load(selective.folderRoot),reloaded.LastError());
+   Check(reloaded.FindCard(cardId)->FindObject(textId)->scriptFile.empty(),"Passive refs remain optional on reload");
+   auto metadata=nlohmann::json::parse(reloaded.ToJson());
+   Check(!metadata["cards"][0]["objects"][6].contains("scriptFile"),"Passive scriptFile omitted from JSON");
+   // Existing Folder decks with passive JS remain readable; exports keep the
+   // source file and preserve its code inline without creating a new JS file.
+   auto* legacy=reloaded.FindCard(cardId)->FindObject(textId);
+   legacy->scriptFile="script/legacy-text.js";
+   {std::ofstream out(reloaded.folderRoot/"script/legacy-text.js");out<<"// retained legacy code";}
+   Check(reloaded.Save(reloaded.folderRoot/"main.deck"),reloaded.LastError());
+   Stack old;Check(old.Load(reloaded.folderRoot),old.LastError());
+   old.Export(root/"SelectiveExport",true);
+   Stack exported;Check(exported.Load(root/"SelectiveExport"),exported.LastError());
+   Check(exported.FindCard(cardId)->FindObject(textId)->scriptFile.empty(),"Export omits passive JS ref");
+   Check(exported.FindCard(cardId)->FindObject(textId)->script=="// retained legacy code","Export preserves legacy code inline");
+   Check(std::filesystem::exists(old.folderRoot/"script/legacy-text.js"),"Source legacy JS preserved");
+   Check(!std::filesystem::exists(root/"SelectiveExport/script/RenamedCard_RenamedText.js"),"Export creates no passive JS");
+  }
+  {
+   Stack source;source.CreateNew("Templates");source.script.clear();
+   const auto cardId=source.currentCardId;source.FindCard(cardId)->script=" \t\r\n";
+   const ObjectType types[]={ObjectType::Button,ObjectType::Checkbox,ObjectType::RadioButton,ObjectType::Listbox,ObjectType::DropdownList};
+   for(auto type:types)source.AddObject(cardId,type,ObjectTypeName(type)).script=" \r\n";
+   const auto retained=source.AddObject(cardId,ObjectType::Button,"ExistingCode").id;
+   const std::string custom="alert('existing top-level code');";
+   source.FindCard(cardId)->FindObject(retained)->script=custom;
+   source.Export(root/"TemplateExport",true);
+   Stack result;Check(result.Load(root/"TemplateExport"),result.LastError());
+   Check(result.script==DefaultDeckScript(),"Export initializes empty Deck script");
+   Check(result.FindCard(cardId)->script==DefaultCardScript(),"Export initializes whitespace Card script");
+   for(const auto& o:result.FindCard(cardId)->objects)
+       Check(o.script==(o.id==retained?custom:DefaultObjectScript(o.type)),"Export supplies handlers only for blank scripts");
+   Check(source.script.empty()&&source.FindCard(cardId)->script==" \t\r\n","Export leaves original code unchanged");
+   auto* button=result.FindCard(cardId)->FindObject(result.FindCard(cardId)->objects.front().id);
+   {std::ofstream out(result.folderRoot/PathFromUtf8(button->scriptFile));out<<"";}
+   result.Export(root/"TemplateReexport",true);
+   Stack second;Check(second.Load(root/"TemplateReexport"),second.LastError());
+   Check(second.FindCard(cardId)->objects.front().script==DefaultObjectScript(ObjectType::Button),"Folder reexport initializes empty external JS");
+   Check(Read(result.folderRoot/PathFromUtf8(button->scriptFile)).empty(),"Reexport preserves original empty JS file");
+  }
   auto launch=ParseCommandLine(std::vector<std::string>{"--magicFolder",PathToUtf8(root/"Example")});
   Check(launch.folderMode&&launch.mode==LaunchMode::Magic&&launch.error.empty(),"CLI Folder mode");
   Check(ParseCommandLine(std::vector<std::string>{"--magic"}).mode==LaunchMode::Magic,"CLI alias");
+  auto vscodeLaunch=ParseCommandLine(std::vector<std::string>{"--magicFolder","--vscode",PathToUtf8(root/"Example")});
+  Check(vscodeLaunch.vscodeMode&&vscodeLaunch.folderMode&&vscodeLaunch.error.empty(),"VSCode compact Magic launch");
+  Check(!ParseCommandLine(std::vector<std::string>{"--vscode"}).error.empty(),"VSCode option requires Folder Magic");
+  Check(!ParseCommandLine(std::vector<std::string>{"--magic","--vscode"}).error.empty(),"VSCode option rejects ordinary Magic");
+  auto scriptArg=ParseCommandLine(std::vector<std::string>{"--magicFolder",PathToUtf8(root/"Example"),"--vscode"});
+  Check(!scriptArg.vscodeMode&&scriptArg.scriptArgs==std::vector<std::string>{"--vscode"},"Trailing VSCode argument remains script argument");
   GuiView view(launch,{});Check(view.DeckData().folderMode&&!view.ScriptsEnabled(),"Folder Magic disables scripts");
   Reject([&]{view.BeginScriptEditor("deck");});
   auto& deck=view.MutableDeckData();auto id=deck.cards.front().id;
   auto button=deck.AddObject(id,ObjectType::Button,"Run").id;
+  const auto countBeforeDuplicate=deck.FindCard(id)->objects.size();
+  Reject([&]{deck.AddObject(id,ObjectType::Image,"Run");});
+  Check(deck.FindCard(id)->objects.size()==countBeforeDuplicate,"Duplicate object names reject before mutation");
   auto script=root/"Example"/PathFromUtf8(deck.FindCard(id)->FindObject(button)->scriptFile);
   {std::ofstream out(script);out<<"function mouseUp(){ alert('external'); }\n";}
   view.SaveDeck();Check(Read(script).find("external")!=std::string::npos,"Save preserves external JS");
@@ -44,9 +107,13 @@ int main(){
   Check(roundtrip.folderMode&&roundtrip.name=="RoundTrip","Export Folder roundtrip");
   auto missing=root/"RoundTrip"/PathFromUtf8(roundtrip.scriptFile);std::filesystem::remove(missing);
   Stack editor;Check(editor.Load(root/"RoundTrip",false),editor.LastError());Check(!player.Load(root/"RoundTrip"),"Player rejects missing JS");
-  auto same=root/"Moved/script/Renamed_Go.js";auto object=deck.AddObject(id,ObjectType::Button,"Go");
+  auto same=root/"Moved/script/Renamed_Unused.js";
+  std::filesystem::copy_file(root/"Moved/script/Renamed_Go.js",same);
+  auto object=deck.AddObject(id,ObjectType::Button,"Unused");
   Check(object.script.find("external")!=std::string::npos&&Read(same).find("external")!=std::string::npos,"New object links existing script");
-  Reject([&]{deck.Export(root/"DuplicateNames",true);});
+  auto conflictingDeck=deck;
+  conflictingDeck.FindCard(id)->FindObject(object.id)->name="Go";
+  Reject([&]{conflictingDeck.Export(root/"DuplicateNames",true);});
   Check(!std::filesystem::exists(root/"DuplicateNames"),"Export conflicts preflight");
   Check(!deck.Save(root/"wrong.deck"),"Save cannot convert format");
   auto invalid=nlohmann::json::parse(deck.ToJson());invalid["scriptFile"]="../escape.js";

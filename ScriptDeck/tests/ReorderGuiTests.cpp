@@ -26,6 +26,30 @@ int main(){
  order("objectOrder","下へ");order("cardOrder","下へ");
  io.AddKeyEvent(ImGuiMod_Ctrl,true);io.AddKeyEvent(ImGuiKey_S,true);frame();io.AddKeyEvent(ImGuiKey_S,false);io.AddKeyEvent(ImGuiMod_Ctrl,false);frame();assert(!view.HasUnsavedChanges());
  Stack saved;assert(saved.Load(path));assert(saved.cards[1].id==first);assert(saved.FindCard(first)->objects[0].id==b);assert(saved.FindCard(first)->objects[1].id==a);assert(saved.currentCardId==first);
+ // Adding an object asks for its name before changing the Deck.
+ const auto targetId=view.DeckData().currentCardId;
+ const auto objectCount=view.DeckData().FindCard(targetId)->objects.size();
+ activate(editor->GetID("button"));
+ assert(view.DeckData().FindCard(targetId)->objects.size()==objectCount);
+ assert(view.SelectedObjectId().empty());
+ ImGuiWindow* dialog=ImGui::FindWindowByName("新規作成の名前");assert(dialog&&dialog->Active);
+ auto accept=[&](const char* label){auto& g=*ImGui::GetCurrentContext();g.NavWindow=dialog;g.NavNextActivateId=dialog->GetID(label);g.NavNextActivateFlags=ImGuiActivateFlags_None;frame();frame();};
+ accept("作成");
+ assert(view.DeckData().FindCard(targetId)->objects.size()==objectCount+1);
+ assert(view.DeckData().FindCard(targetId)->objects.back().name=="button1");
+ const auto createdId=view.DeckData().FindCard(targetId)->objects.back().id;
+ assert(view.SelectedObjectId()==createdId);
+ activate(editor->GetID("button"));
+ io.AddInputCharactersUTF8("button1");frame();frame();accept("作成");
+ assert(view.DeckData().FindCard(targetId)->objects.size()==objectCount+1);
+ assert(dialog->Active);accept("キャンセル");
+ assert(view.SelectedObjectId()==createdId);
+ activate(editor->GetID("button"));
+ io.AddInputCharactersUTF8("日本語ボタン");frame();frame();accept("作成");
+ assert(view.DeckData().FindCard(targetId)->objects.size()==objectCount+2);
+ assert(view.DeckData().FindCard(targetId)->objects.back().name=="日本語ボタン");
+ assert(view.SelectedObjectId()==view.DeckData().FindCard(targetId)->objects.back().id);
+
  }
  ImGui::DestroyContext();std::filesystem::remove(path);std::cout<<"PASS: Magic card/object order, selection retained, disabled boundary and save\n";
 }

@@ -17,7 +17,7 @@ function mouseUp(event) {
 
 FolderのPlayerではDeck・カード・部品の`name`／`script`への代入を拒否します。
 名前はMagicで変更し、コードはScriptDeckを終了してVSCodeで編集してください。
-動的作成時の`script`指定も拒否し、既定名の外部JSを作成またはリンクします。
+動的作成時の`script`指定も拒否します。イベントのある部品は既定名の外部JSを作成またはリンクし、Field・Text・Image・InputBox・TextEditorは外部JSを作成しません。
 通常Deckの内蔵コードを指定する以下の例は、Folderへそのまま適用できません。
 詳細は[Deck形式・Export](FILE_FORMATS.md)を参照してください。
 
@@ -178,3 +178,5 @@ checkedはbooleanで既定値false。RadioButtonのgroupはstringで既定値空
 新規部品には型に応じたイベント雛形を設定します。createObjectの初期プロパティでscriptを指定した場合は指定コードを使用します。cloneは元のコードを保持します。雛形の一覧は [USER_GUIDE.md](USER_GUIDE.md) を参照してください。
 
 形式ごとの保存・相対パスの一覧は[Deck形式・Export](FILE_FORMATS.md)を参照してください。
+
+新規オブジェクト作成時、同じカードに同名のオブジェクトが存在する場合は例外となり、作成しません。異なるカードでは同じ名前を使用できます。Magicの追加画面では英語の連番名を初期値として提示し、作成前に日本語も含む名前を入力できます。

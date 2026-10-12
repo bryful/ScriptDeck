@@ -108,15 +108,30 @@ function activate(context) {
   }};
   context.subscriptions.push(vscode.window.registerTreeDataProvider('scriptdeck.decks',tree));
   const watcher=vscode.workspace.createFileSystemWatcher('**/main.deck');context.subscriptions.push(watcher,watcher.onDidChange(()=>changed.fire()),watcher.onDidCreate(()=>changed.fire()),watcher.onDidDelete(()=>changed.fire()),vscode.workspace.onDidChangeWorkspaceFolders(()=>changed.fire()));
-  const selector={scheme:'file',language:'javascript',pattern:'**/script/**/*.js'};
-  async function belongs(doc){return(await decks()).some(d=>{const rel=path.relative(d.root,doc.uri.fsPath);return !rel.startsWith('..')&&!path.isAbsolute(rel);});}
+  const selector={scheme:'file',language:'javascript'};
+  function containingDeck(doc) {
+    // Find the owning Deck from the file itself, including outside a workspace
+    // and paths excluded from VSCode's workspace search.
+    let root = path.dirname(doc.uri.fsPath);
+    while (true) {
+      const main = path.join(root, 'main.deck');
+      if (fs.existsSync(main)) {
+        try { return {root, deck:readDeck(fs.readFileSync(main,'utf8').replace(/^\uFEFF/,''))}; }
+        catch (e) { output.appendLine(`${main}: ${e.message}`); return; }
+      }
+      const parent = path.dirname(root);
+      if (parent === root) return;
+      root = parent;
+    }
+  }
+  async function belongs(doc) { return !!containingDeck(doc); }
   context.subscriptions.push(vscode.languages.registerCompletionItemProvider(selector,{
     async provideCompletionItems(doc,pos){if(!await belongs(doc))return[];
       const prefix=doc.lineAt(pos).text.slice(0,pos.character);const match=prefix.match(/([\w$.]+)\.\w*$/);const owner=match?.[1];
       const items=api.filter(a=>owner?a.name.startsWith(owner+'.'):!a.name.includes('.')).map(a=>{const label=owner?a.name.slice(owner.length+1):a.name;const i=new vscode.CompletionItem(label,a.signature.includes('(')?vscode.CompletionItemKind.Method:vscode.CompletionItemKind.Property);i.detail=a.signature;i.documentation=new vscode.MarkdownString(a.description);return i;});
       if(!owner)for(const name of ['app','fs'])items.push(new vscode.CompletionItem(name,vscode.CompletionItemKind.Module));
       if(/(?:objectByName|goCard|cardByName)\(\s*["'][^"']*$/.test(prefix)){
-        const all=await decks();const d=all.find(d=>!path.relative(d.root,doc.uri.fsPath).startsWith('..'));if(d){const names=prefix.includes('objectByName(')?d.deck.cards.flatMap(c=>(c.objects||[]).map(o=>o.name)):d.deck.cards.map(c=>c.name);for(const name of new Set(names.filter(Boolean)))items.push(new vscode.CompletionItem(name,vscode.CompletionItemKind.Value));}}
+        const d=containingDeck(doc);if(d){const names=prefix.includes('objectByName(')?d.deck.cards.flatMap(c=>(c.objects||[]).map(o=>o.name)):d.deck.cards.map(c=>c.name);for(const name of new Set(names.filter(Boolean)))items.push(new vscode.CompletionItem(name,vscode.CompletionItemKind.Value));}}
       return items;
     }
   },'.','"',"'"));

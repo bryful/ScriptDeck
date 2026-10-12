@@ -36,6 +36,12 @@ std::string ObjectTypeName(ObjectType type);
 ObjectType ParseObjectType(const std::string& name);
 
 
+inline bool HasObjectScriptEvent(ObjectType type)
+{
+    return type == ObjectType::Button || type == ObjectType::Checkbox ||
+        type == ObjectType::RadioButton || type == ObjectType::Listbox || type == ObjectType::DropdownList;
+}
+
 inline std::string DefaultDeckScript()
 {
     return "//ここに記述したものがDeckオープン時に実行されます\n";

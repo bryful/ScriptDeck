@@ -9,7 +9,14 @@ JavaScriptエンジンはQuickJS-NGです。共有の組み込みAPIとして `a
 通常Deckは`script`にコードを内蔵し、Folderは`scriptFile`で外部JSを参照します。
 FolderのJSはScriptDeckを終了してVSCodeで編集し、Playerの再起動で読み込みます。
 deckxへのExportでは最新の外部JSを内蔵へ変換します。保存形式によってイベントの仕様は変わりません。
+専用イベントのないField・Text・Image・InputBox・TextEditorは、新規作成・複製・FolderへのExportで外部JSを生成しません。Deck・Cardとイベントのある部品のみ生成します。既存の非イベント部品のJSは自動削除しません。
 詳細は[Deck形式・Export](FILE_FORMATS.md)を参照してください。
+
+## イベント雛形の挿入
+
+通常Magicでは、新規Deck・Card・イベントのある部品の作成時に初期コードを設定します。既存コードが空または空白・改行のみの場合も、スクリプト編集画面を開く際に雛形を挿入します。非空のコードは変更しません。
+
+FolderへのExport・再Exportでは、空コードに対象の雛形を挿入して出力します。Deckは説明コメント、Cardは`openCard`・`dropFiles`、Buttonは`mouseUp`、Listbox・DropdownList・Checkbox・RadioButtonは`change`です。元のDeck・JSは変更せず、専用イベントのない部品の外部JSも作成しません。保存方法を含む操作別の一覧は[操作ガイド](USER_GUIDE.md#新規作成時のスクリプト雛形)を参照してください。
 
 ## 実行タイミング
 
@@ -30,6 +37,69 @@ function openCard(event) {
 ```
 
 カードスクリプトのローカル変数・関数は、そのカードスクリプトの呼び出し内のスコープです。共有するものはDeckスクリプトに置きます。Magicへ戻って編集するとランタイムを破棄し、次のプレビュー開始時にDeckスクリプトから再実行します。
+
+## スクリプト直下のコードとイベント関数
+
+カード・イベントを持つ部品では、イベントの配送ごとに**スクリプト全体を評価し、その後、対応するイベント関数があれば呼び出します**。関数の外に書いた処理も、そのたびに実行されます。ハンドラーが未定義でも、スクリプト直下の処理は実行します。
+
+| 対象 | スクリプト全体を評価するタイミング | 評価後に呼ぶ関数 |
+| --- | --- | --- |
+| Deck | Player起動、Deck読み込み・切り替え、通常Magicのプレビュー開始によるランタイム生成時に1回 | 専用ハンドラーなし |
+| Card | 起動時の表示、別カードへの移動（戻ってきた場合も含む） | `openCard(event)` |
+| Card | カード領域へのファイル・フォルダのドロップごと | `dropFiles(event)` |
+| Button | クリック、Enter／Escape対象ボタンの操作ごと | `mouseUp(event)` |
+| Checkbox / RadioButton | ユーザー操作による状態変更の通知ごと | `change(event)` |
+| Listbox / DropdownList | ユーザー操作による選択変更の通知ごと | `change(event)` |
+| Field / Text / Image / InputBox / TextEditor | 現在、専用イベントによる自動実行なし | なし |
+
+### Button：mouseUpがなくても直下の処理はクリック時に実行
+
+```javascript
+// Buttonスクリプト：クリックするたびに表示する。
+alert("直下の処理");
+
+function mouseUp(event) {
+    alert("mouseUpの処理");
+}
+```
+
+この例は、クリックごとに「直下の処理」→「mouseUpの処理」の順で表示します。`mouseUp`を削除しても「直下の処理」はクリックごとに実行します。ButtonスクリプトをPlayer起動時に一括実行する仕組みではありません。
+
+### Card：ファイルドロップ時にも直下のコードを再実行
+
+```javascript
+// Cardスクリプト：カード表示時とファイルドロップ時の両方で実行。
+alert("Cardスクリプト全体を評価しました");
+
+function openCard(event) {
+    // カードを開いた時だけ行う初期化はここへ書く。
+    alert("カードを開きました");
+}
+
+function dropFiles(event) {
+    alert(event.paths);
+}
+```
+
+ファイルドロップ時は、直下の処理→`dropFiles`の順で実行し、`openCard`は呼びません。`dropFiles`を定義していなくても、カード領域へドロップすると直下のコードは評価されます。初期化処理を直下に書くとドロップ時にも繰り返されるため、カードを開いた時だけの処理は`openCard`内へ置いてください。ボタンをクリックしただけでCardスクリプト全体を再評価することはありません。
+
+### Deck：直下の初期化はランタイム生成時に1回
+
+Deckスクリプトは全体をグローバルスコープで評価します。カード移動・部品操作・ファイルドロップでは再実行しません。Deckの再読み込みや切り替え、Player再起動、通常Magicのプレビュー再開始では新しいランタイムを作り、再実行します。
+
+```javascript
+// Deckスクリプト：ランタイムごとの共有状態。
+globalThis.clickCount = 0;
+
+function countClick() {
+    clickCount += 1;
+    return clickCount;
+}
+```
+
+Card・部品スクリプトのローカル変数はイベントごとに作り直されます。前回の値を保持したい状態はDeck側の共有変数、またはオブジェクトのプロパティに保存してください。直下で例外が発生した場合は、その後のイベント関数を呼ばずエラーになります。イベント引数の`event`はハンドラー関数へ渡されるので、イベント情報を使う処理はその関数内へ書いてください。
+
+通常Deck・Folder・deckxでこの評価順序は共通です。Magicの編集状態では実行せず、FolderのMagicには実行プレビューもありません。
 
 ## 実装済みイベント
 

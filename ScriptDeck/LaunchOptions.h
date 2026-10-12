@@ -12,6 +12,7 @@ struct LaunchOptions
     std::string input;
     std::vector<std::string> scriptArgs;
     bool folderMode = false;
+    bool vscodeMode = false;
     bool showHelp = false;
     std::string error;
 };

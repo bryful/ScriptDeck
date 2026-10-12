@@ -229,7 +229,7 @@
           "items": [],
           "name": "キャンセル",
           "resourceId": "",
-          "script": "alert(\"Escapeボタンが押されました\");",
+          "script": "function mouseUp(event) {\n    alert(\"Escapeボタンが押されました\");\n}\n",
           "selectedIndex": -1,
           "text": "キャンセル",
           "textColor": [

@@ -71,6 +71,7 @@ public:
     void EndScriptEditor();
     bool IsScriptEditorOpen() const { return scriptEditing_; }
     bool HasUnsavedChanges() const { return dirty_; }
+    const std::string& SelectedObjectId() const { return selected_; }
     std::string WindowTitle() const;
     const std::filesystem::path& DeckPath() const { return path_; }
     void SetCardSize(int width, int height);
@@ -86,6 +87,7 @@ private:
     std::filesystem::path path_;
     GuiServices services_;
     bool magic_ = false, test_ = false, dirty_ = false;
+    bool vscodeMode_ = false;
     bool scriptEditing_ = false, scriptEditorFocus_ = false;
     std::string scriptEditorKind_, scriptEditorCard_, scriptEditorObject_, scriptEditorTitle_;
     void DrawScriptEditor();
@@ -95,6 +97,10 @@ private:
     std::vector<ConsoleCommand> consoleCommands_;
     void DrawScriptConsole();
     std::string selected_, status_;
+    std::string createName_, createError_, createCardId_, createPreviousSelection_;
+    bool focusCreatedName_ = false;
+    ObjectType createType_ = ObjectType::Button;
+    bool createCard_ = false, createFocus_ = false;
     std::vector<ButtonEvent> buttonEvents_;
     std::vector<FileDropEvent> fileDropEvents_;
     ImVec2 cardOrigin_{}, cardExtent_{}, cardClipMin_{}, cardClipMax_{};

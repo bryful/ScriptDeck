@@ -716,25 +716,25 @@
   {
     "name": "openCard",
     "signature": "openCard(event)",
-    "description": "起動時のカード表示、別カードへの移動後。",
-    "file": "SCRIPT_API.md"
-  },
-  {
-    "name": "mouseUp",
-    "signature": "mouseUp(event)",
-    "description": "ボタンの操作、カードのEnter／Escape対象ボタン操作。",
-    "file": "SCRIPT_API.md"
-  },
-  {
-    "name": "change",
-    "signature": "change(event)",
-    "description": "ユーザーによるチェック・選択状態の変更。",
+    "description": "`openCard(event)`",
     "file": "SCRIPT_API.md"
   },
   {
     "name": "dropFiles",
     "signature": "dropFiles(event)",
-    "description": "表示中のカードへのファイル・フォルダのドロップ。",
+    "description": "`dropFiles(event)`",
+    "file": "SCRIPT_API.md"
+  },
+  {
+    "name": "mouseUp",
+    "signature": "mouseUp(event)",
+    "description": "`mouseUp(event)`",
+    "file": "SCRIPT_API.md"
+  },
+  {
+    "name": "change",
+    "signature": "change(event)",
+    "description": "`change(event)`",
     "file": "SCRIPT_API.md"
   },
   {

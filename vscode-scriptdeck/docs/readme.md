@@ -19,7 +19,7 @@ VSCode拡張のインストール、8つのコマンド、ScriptDeck.exeの登�
 
 | 文書 | 内容 |
 | --- | --- |
-| [JavaScript・イベント](SCRIPT_API.md) | 実行タイミングとスコープ、openCard・mouseUp・change・dropFiles。 |
+| [JavaScript・イベント](SCRIPT_API.md) | 実行タイミングとスコープ、直下のコードのイベントごとの再評価、Deck・Card・各部品の違い、openCard・mouseUp・change・dropFiles。 |
 | [カード・オブジェクトAPI](OBJECT_API.md) | 検索、プロパティ、リスト・チェック状態、動的作成・複製・削除・重なり順。 |
 | [カード・Deck移動API](NAVIGATION_API.md) | カード移動、Deck切り替え、openDeck・saveDeck・saveAsDeck、Homeと新規Deck。 |
 | [アプリケーションAPI](APP_API.md) | 引数、標準入出力、音声、モード・ウィンドウ制御、パス、関連付け、クリップボード、外部プロセス。 |

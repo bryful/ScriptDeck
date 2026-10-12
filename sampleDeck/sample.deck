@@ -25,7 +25,9 @@
             0.3700000047683716,
             1.0
           ],
+          "checked": false,
           "enabled": true,
+          "group": "",
           "height": 32.0,
           "id": "object1",
           "imagePath": "",
@@ -47,14 +49,14 @@
           "visible": true,
           "width": 120.0,
           "x": 20.0,
-          "y": 20.0,
-          "checked": false,
-          "group": ""
+          "y": 20.0
         },
         {
           "backgroundColor": null,
           "borderColor": null,
+          "checked": false,
           "enabled": true,
+          "group": "",
           "height": 80.0,
           "id": "object2",
           "imagePath": "",
@@ -71,14 +73,14 @@
           "visible": true,
           "width": 400.0,
           "x": 20.0,
-          "y": 70.0,
-          "checked": false,
-          "group": ""
+          "y": 70.0
         },
         {
           "backgroundColor": null,
           "borderColor": null,
+          "checked": false,
           "enabled": true,
+          "group": "",
           "height": 60.0,
           "id": "object3",
           "imagePath": "",
@@ -100,14 +102,14 @@
           "visible": true,
           "width": 400.0,
           "x": 20.0,
-          "y": 180.0,
-          "checked": false,
-          "group": ""
+          "y": 180.0
         },
         {
           "backgroundColor": null,
           "borderColor": null,
+          "checked": false,
           "enabled": true,
+          "group": "",
           "height": 100.0,
           "id": "object4",
           "imagePath": "assets/logo.png",
@@ -124,14 +126,14 @@
           "visible": true,
           "width": 256.0,
           "x": 20.0,
-          "y": 260.0,
-          "checked": false,
-          "group": ""
+          "y": 260.0
         },
         {
           "backgroundColor": null,
           "borderColor": null,
+          "checked": false,
           "enabled": true,
+          "group": "",
           "height": 120.0,
           "id": "object5",
           "imagePath": "",
@@ -152,14 +154,14 @@
           "visible": true,
           "width": 160.0,
           "x": 450.0,
-          "y": 70.0,
-          "checked": false,
-          "group": ""
+          "y": 70.0
         },
         {
           "backgroundColor": null,
           "borderColor": null,
+          "checked": false,
           "enabled": true,
+          "group": "",
           "height": 32.0,
           "id": "object6",
           "imagePath": "",
@@ -180,14 +182,14 @@
           "visible": true,
           "width": 160.0,
           "x": 450.0,
-          "y": 210.0,
-          "checked": false,
-          "group": ""
+          "y": 210.0
         },
         {
           "backgroundColor": null,
           "borderColor": null,
+          "checked": false,
           "enabled": true,
+          "group": "",
           "height": 32.0,
           "id": "object7",
           "imagePath": "",
@@ -204,9 +206,7 @@
           "visible": true,
           "width": 360.0,
           "x": 20.0,
-          "y": 365.0,
-          "checked": false,
-          "group": ""
+          "y": 365.0
         },
         {
           "backgroundColor": [
@@ -221,7 +221,9 @@
             0.3700000047683716,
             1.0
           ],
+          "checked": false,
           "enabled": true,
+          "group": "",
           "height": 32.0,
           "id": "object8",
           "imagePath": "",
@@ -229,7 +231,7 @@
           "items": [],
           "name": "キャンセル",
           "resourceId": "",
-          "script": "alert(\"Escapeボタンが押されました\");",
+          "script": "function mouseUp(event) {\n    alert(\"Escapeボタンが押されました\");\n}\n",
           "selectedIndex": -1,
           "text": "キャンセル",
           "textColor": [
@@ -243,9 +245,7 @@
           "visible": true,
           "width": 160.0,
           "x": 450.0,
-          "y": 20.0,
-          "checked": false,
-          "group": ""
+          "y": 20.0
         }
       ],
       "script": ""
@@ -265,7 +265,9 @@
         {
           "backgroundColor": null,
           "borderColor": null,
+          "checked": false,
           "enabled": true,
+          "group": "",
           "height": 80.0,
           "id": "object1",
           "imagePath": "",
@@ -282,9 +284,7 @@
           "visible": true,
           "width": 580.0,
           "x": 20.0,
-          "y": 20.0,
-          "checked": false,
-          "group": ""
+          "y": 20.0
         }
       ],
       "script": ""
@@ -293,8 +293,8 @@
   "currentCardId": "card1",
   "format": "ScriptDeck",
   "height": 480,
-  "name": "サンプルデッキ",
-  "script": "function main(input) { return input; }",
+  "name": "SampleDeck",
+  "script": "",
   "startupPlacement": "default",
   "version": 1,
   "width": 640

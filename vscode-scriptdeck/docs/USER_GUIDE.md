@@ -142,9 +142,20 @@ Magicのツールバーには「Homeを開く」を追加しました。未保�
 | カード | 空の `openCard(event)` と `dropFiles(event)`。 |
 | Button | 空の `mouseUp(event)`。 |
 | Listbox / DropdownList / Checkbox / RadioButton | 空の `change(event)`。 |
-| Field / InputBox / Text / Image | 専用イベントがないことを示すコメント。 |
+| Field / InputBox / Text / Image / TextEditor | 専用イベントなし。通常Deckには説明コメントを設定し、Folderでは外部JSを生成しません。 |
 
-既存Deckの読み込みでコードを書き換えることはありません。既存の空スクリプトは、編集ボタンを押した時に同じ雛形を挿入します。部品複製は元のコードを保持し、通常DeckではcreateObjectでscriptを指定した場合はその指定を優先します。Folderでは外部JSを使用し、scriptの指定・書き換えを拒否します。
+通常MagicとFolderへのExportでの雛形の扱いは次のとおりです。
+
+| 操作 | 雛形を設定する条件 | 保存先 |
+| --- | --- | --- |
+| 通常Magicで新規Deck・Card・部品を作成 | 作成時に対象の初期コードを設定 | 通常Deckの`script`。保存操作でファイルに反映 |
+| 通常Magicで既存のスクリプト編集を開く | コードが空、または空白・改行のみなら対象の雛形を挿入 | 通常Deckの`script`。未保存の変更として扱う |
+| Folderで新規作成 | Deck・Card・イベントのある部品に初期コードを設定 | `script/`内のJS。既定名のファイルがあれば既存内容を使用 |
+| FolderへExport・再Export | 空、または空白・改行のみなら対象の雛形を挿入 | 出力先のJS。元のDeck・JSは変更しない |
+
+既存Deckを読み込むだけではコードを書き換えません。非空の既存コードには雛形を追加しません。通常Magicで専用イベントのない部品を選んだ場合は、部品スクリプトの編集ボタンを表示しません。Deck・Cardとイベントのある部品は、コードが空でも編集ボタンを表示します。
+
+部品複製は元のコードを保持します。通常Deckでは`createObject`で`script`を指定した場合はその指定を優先します。Folderでは`script`の指定・書き換えを拒否します。イベントのある部品は外部JSを使用し、専用イベントのない部品は外部JSを作成しません。
 
 
 ## CLIでのDeck操作
@@ -181,7 +192,7 @@ VSCodeは標準のインストール先、App Paths登録、またはPATHの`cod
 
 ## VSCode拡張
 
-Folder Deck用の拡張は[vscode-scriptdeck](../vscode-scriptdeck/README.md)にあります。VSCodeの拡張機能画面の「…」→「VSIXからのインストール」で`scriptdeck-0.1.1.vsix`をインストールし、`main.deck`のあるフォルダーを開いてください。
+Folder Deck用の拡張は[vscode-scriptdeck](../vscode-scriptdeck/README.md)にあります。VSCodeの拡張機能画面の「…」→「VSIXからのインストール」で`scriptdeck-0.1.3.vsix`をインストールし、`main.deck`のあるフォルダーを開いてください。
 
 コマンドパレットの「ScriptDeck: ScriptDeck.exeを登録」で実行ファイルを選択します。選んだパスは`scriptdeck.executablePath`としてユーザー設定に保存します。既存のワークスペース設定がある場合はそちらを更新します。登録コマンドは実行ファイルの移動・更新後の変更にも使用できます。
 
@@ -190,3 +201,27 @@ Folder Deck用の拡張は[vscode-scriptdeck](../vscode-scriptdeck/README.md)に
 再生・Magic・終了・新規Folder作成・deck/deckx出力・APIリファレンス表示もコマンドパレットから操作できます。Deckツリーから外部JSを開き、API補完とホバー説明を利用できます。起動・出力前にVSCodeのファイルを保存します。終了コマンドは拡張から起動したウィンドウのみ対象とし、Magicの未保存確認を維持します。
 
 CLIで通常Deckへ変換する場合は`ScriptDeck.exe -run folder exportDeck output.deck`を使用します。外部JSを内蔵に変換し、参照リソースもコピーします。
+
+### VSCodeから開くMagicの上部ボタン
+
+VSCode拡張から新規Folder作成・Magic起動を行うと、上部ボタンは「保存」「< 前」「次 >」のみ表示します。カード・部品の追加、配置、プロパティ編集は従来どおり利用できます。通常起動のMagicでは従来のボタンを表示します。CLIでは`ScriptDeck.exe --magicFolder --vscode "C:\Decks\MyDeck"`で同じ表示にできます。`--vscode`はDeckパスの前に指定してください。
+
+### 新規カード・オブジェクトの名前
+
+Magicで追加ボタンを押すと、作成前に名前を入力するダイアログを表示します。初期値は`Card1`、`button1`、`image1`など英語の連番名です。使用済みの初期値は避けて候補を表示します。日本語の名前も入力できます。
+
+入力された名前が同じカード内の既存オブジェクトと一致する場合は、名前を自動変更せずエラーを表示し、作成しません。カード名も既存カードと同名ならエラーです。空の名前も作成できません。エラー後は名前を修正して再試行でき、キャンセルではオブジェクトや外部JSを作成しません。既存オブジェクトの名前は変更しません。
+
+### イベント関数の外に書いた処理
+
+カード・部品のイベント配送では、スクリプト全体を評価してから`openCard`・`mouseUp`・`change`・`dropFiles`のうち対応する関数を呼びます。関数がなくても、直下の処理は実行されます。Cardはファイルドロップ時にも全体を評価するため、カードを開く時だけの初期化は`openCard`内へ書いてください。Deckの直下はランタイム生成時に1回実行し、カード移動や部品操作だけでは再実行しません。対象ごとの詳しいタイミングと例は[JavaScript・イベント](SCRIPT_API.md#スクリプト直下のコードとイベント関数)を参照してください。
+
+### 外部JSを作成する部品
+
+FolderではDeck・Cardと、Button・Checkbox・RadioButton・Listbox・DropdownListに外部JSを作成します。専用イベントのないField・Text・Image・InputBox・TextEditorは、新規作成・複製・FolderへのExportでJSを作成しません。既存ファイルは自動削除しません。詳細は[Deck形式・Export](FILE_FORMATS.md)を参照してください。
+
+通常DeckのMagicでも、専用イベントのないField・Text・Image・InputBox・TextEditorを選択した場合は「部品スクリプトを編集」ボタンを表示しません。イベントのある部品はコードが空でも編集ボタンを表示し、Deck・Cardの編集ボタンも引き続き表示します。
+
+### FolderへのExport時の雛形
+
+FolderへのExportでも、コードが空または空白・改行のみの場合は、Deckの説明コメント、Cardの`openCard`・`dropFiles`、Buttonの`mouseUp`、選択・チェック系の`change`の雛形を出力先のJSに挿入します。既存の非空コードには追加・書き換えをしません。元のDeckやJSも変更しません。専用イベントのない部品は引き続き外部JSを生成しません。

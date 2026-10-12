@@ -173,6 +173,8 @@ CardObject& Stack::AddObject(const std::string& cardId, ObjectType type,
 {
     Card* c = FindCard(cardId);
     if (!c) throw std::runtime_error("Card not found: " + cardId);
+    if (std::any_of(c->objects.begin(), c->objects.end(), [&](const auto& object) { return object.name == objectName; }))
+        throw std::runtime_error("An object with the same name already exists in this card.");
     std::size_t n = 1;
     while (c->FindObject("object" + std::to_string(n))) ++n;
     CardObject o;
@@ -187,7 +189,7 @@ CardObject& Stack::AddObject(const std::string& cardId, ObjectType type,
     }
     if (type == ObjectType::InputBox) { o.width = 180; o.text.clear(); }
     if (type == ObjectType::TextEditor) { o.width = 400; o.height = 240; o.text.clear(); }
-    if(folderMode) {
+    if(folderMode && HasObjectScriptEvent(type)) {
         o.scriptFile="script/"+SafeScriptName(c->name)+"_"+SafeScriptName(objectName)+".js";
         CreateScript(folderRoot,o.scriptFile,o.script);
     }
@@ -198,7 +200,7 @@ void Stack::Validate() const
 {
     if(folderMode) {
         ScriptPath(folderRoot,scriptFile);
-        for(const auto& c:cards){ScriptPath(folderRoot,c.scriptFile);for(const auto& o:c.objects)ScriptPath(folderRoot,o.scriptFile);}
+        for(const auto& c:cards){ScriptPath(folderRoot,c.scriptFile);for(const auto& o:c.objects)if(HasObjectScriptEvent(o.type)||!o.scriptFile.empty())ScriptPath(folderRoot,o.scriptFile);}
     } else {
         if(!scriptFile.empty())throw std::runtime_error("External scripts require Folder mode.");
         for(const auto& c:cards){if(!c.scriptFile.empty())throw std::runtime_error("External scripts require Folder mode.");for(const auto& o:c.objects)if(!o.scriptFile.empty())throw std::runtime_error("External scripts require Folder mode.");}
@@ -267,7 +269,10 @@ std::string Stack::ToJson() const
     }
     if (folderMode) {
         j["storage"] = "folder";
-        auto external = [](json& item, const std::string& file) { item.erase("script"); item["scriptFile"] = file; };
+        auto external = [](json& item, const std::string& file) {
+            if(file.empty()) { item.erase("scriptFile"); }
+            else { item.erase("script"); item["scriptFile"] = file; }
+        };
         external(j, scriptFile);
         for (std::size_t i=0;i<cards.size();++i) {
             external(j["cards"][i],cards[i].scriptFile);
@@ -447,13 +452,27 @@ void Stack::LoadExternalScripts() {
     if(!folderMode)return;
     script=ReadScript(ScriptPath(folderRoot,scriptFile));
     for(auto& c:cards){c.script=ReadScript(ScriptPath(folderRoot,c.scriptFile));
-        for(auto& o:c.objects)o.script=ReadScript(ScriptPath(folderRoot,o.scriptFile));}
+        for(auto& o:c.objects)if(!o.scriptFile.empty())o.script=ReadScript(ScriptPath(folderRoot,o.scriptFile));}
 }
 void Stack::EnsureExternalScripts() {
+    auto fillEmpty = [](std::string& code, const std::string& initial) {
+        if(code.find_first_not_of(" \t\r\n\f\v") == std::string::npos) code = initial;
+    };
+    fillEmpty(script, DefaultDeckScript());
     scriptFile="script/deck.js";CreateScript(folderRoot,scriptFile,script);
-    for(auto& c:cards){c.scriptFile="script/"+SafeScriptName(c.name)+".js";CreateScript(folderRoot,c.scriptFile,c.script);
-        for(auto& o:c.objects){o.scriptFile="script/"+SafeScriptName(c.name)+"_"+SafeScriptName(o.name)+".js";CreateScript(folderRoot,o.scriptFile,o.script);}}
+    for(auto& c:cards) {
+        fillEmpty(c.script, DefaultCardScript());
+        c.scriptFile="script/"+SafeScriptName(c.name)+".js";
+        CreateScript(folderRoot,c.scriptFile,c.script);
+        for(auto& o:c.objects) {
+            if(!HasObjectScriptEvent(o.type)){o.scriptFile.clear();continue;}
+            fillEmpty(o.script, DefaultObjectScript(o.type));
+            o.scriptFile="script/"+SafeScriptName(c.name)+"_"+SafeScriptName(o.name)+".js";
+            CreateScript(folderRoot,o.scriptFile,o.script);
+        }
+    }
 }
+
 void Stack::CreateFolder(const std::filesystem::path& folder) {
     if(std::filesystem::exists(folder))throw std::runtime_error("Folder already exists.");
     Stack candidate;candidate.CreateNew(PathToUtf8(folder.filename()));
@@ -518,7 +537,7 @@ void Stack::Export(const std::filesystem::path& destination,bool asFolder) const
         std::set<std::filesystem::path> files;
         auto check=[&](std::string file){auto p=PathFromUtf8(file).wstring();std::transform(p.begin(),p.end(),p.begin(),::towlower);
             if(!files.insert(std::filesystem::path(p)).second)throw std::runtime_error("Duplicate script filename: "+file);};
-        check("deck.js");for(const auto& c:copy.cards){check(SafeScriptName(c.name)+".js");for(const auto& o:c.objects)check(SafeScriptName(c.name)+"_"+SafeScriptName(o.name)+".js");}
+        check("deck.js");for(const auto& c:copy.cards){check(SafeScriptName(c.name)+".js");for(const auto& o:c.objects)if(HasObjectScriptEvent(o.type))check(SafeScriptName(c.name)+"_"+SafeScriptName(o.name)+".js");}
         std::filesystem::create_directories(target);copy.EnsureExternalScripts();target/="main.deck";
     } else {copy.folderMode=false;copy.folderRoot.clear();copy.scriptFile.clear();for(auto& c:copy.cards){c.scriptFile.clear();for(auto& o:c.objects)o.scriptFile.clear();}}
     for(const auto& asset:assets) {
@@ -556,8 +575,8 @@ void Stack::Rename(const std::string& kind,const std::string& cardId,const std::
     struct Move {std::string* reference;std::string next;};std::vector<Move> moves;
     if(kind=="card") {
         moves.push_back({&card->scriptFile,"script/"+SafeScriptName(newName)+".js"});
-        for(auto& o:card->objects)moves.push_back({&o.scriptFile,"script/"+SafeScriptName(newName)+"_"+SafeScriptName(o.name)+".js"});
-    } else moves.push_back({&object->scriptFile,"script/"+SafeScriptName(card->name)+"_"+SafeScriptName(newName)+".js"});
+        for(auto& o:card->objects)if(!o.scriptFile.empty())moves.push_back({&o.scriptFile,"script/"+SafeScriptName(newName)+"_"+SafeScriptName(o.name)+".js"});
+    } else if(!object->scriptFile.empty())moves.push_back({&object->scriptFile,"script/"+SafeScriptName(card->name)+"_"+SafeScriptName(newName)+".js"});
     auto pathKey=[](const std::string& file){auto key=PathFromUtf8(file).lexically_normal().wstring();std::transform(key.begin(),key.end(),key.begin(),::towlower);return key;};
     std::map<std::wstring,int> uses;uses[pathKey(scriptFile)]++;
     for(const auto& c:cards){uses[pathKey(c.scriptFile)]++;for(const auto& o:c.objects)uses[pathKey(o.scriptFile)]++;}
@@ -589,7 +608,9 @@ CardObject& Stack::DuplicateObject(const std::string& cardId,const std::string& 
     std::size_t n=1;while(card->FindObject("object"+std::to_string(n)))++n;copy.id="object"+std::to_string(n);
     copy.name+=" copy";while(std::any_of(card->objects.begin(),card->objects.end(),[&](const auto& o){return o.name==copy.name;}))copy.name+=" copy";
     copy.x+=10;copy.y+=10;
-    if(folderMode){copy.script=ReadScript(ScriptPath(folderRoot,copy.scriptFile));copy.scriptFile="script/"+SafeScriptName(card->name)+"_"+SafeScriptName(copy.name)+".js";
+    if(folderMode && !copy.scriptFile.empty())copy.script=ReadScript(ScriptPath(folderRoot,copy.scriptFile));
+    if(folderMode && !HasObjectScriptEvent(copy.type))copy.scriptFile.clear();
+    if(folderMode && HasObjectScriptEvent(copy.type)){copy.scriptFile="script/"+SafeScriptName(card->name)+"_"+SafeScriptName(copy.name)+".js";
         if(std::filesystem::exists(ScriptPath(folderRoot,copy.scriptFile)))throw std::runtime_error("Duplicate script destination exists.");CreateScript(folderRoot,copy.scriptFile,copy.script);}
     card->objects.push_back(std::move(copy));return card->objects.back();
 }

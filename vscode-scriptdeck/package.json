@@ -2,7 +2,7 @@
   "name": "scriptdeck",
   "displayName": "ScriptDeck",
   "description": "Folder Deckの再生、Magic、エクスポート、API補完",
-  "version": "0.1.1",
+  "version": "0.1.3",
   "publisher": "scriptdeck",
   "license": "MIT",
   "engines": {
@@ -14,7 +14,8 @@
   ],
   "main": "./extension.js",
   "activationEvents": [
-    "workspaceContains:**/main.deck"
+    "workspaceContains:**/main.deck",
+    "onLanguage:javascript"
   ],
   "capabilities": {
     "untrustedWorkspaces": {

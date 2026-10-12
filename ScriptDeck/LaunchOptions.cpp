@@ -14,6 +14,7 @@ LaunchOptions ParseCommandLine(const std::vector<std::string>& args)
             positional.push_back(arg); continue;
         }
         if (!literal && arg == "--") { literal = true; continue; }
+        if (!literal && arg == "--vscode") { o.vscodeMode = true; continue; }
         if (!literal && (arg == "-h" || arg == "--help" || arg == "/?")) {
             o.showHelp = true; continue;
         }
@@ -31,6 +32,9 @@ LaunchOptions ParseCommandLine(const std::vector<std::string>& args)
         positional.push_back(arg);
     }
     if (o.showHelp) return o;
+    if (o.vscodeMode && (o.mode != LaunchMode::Magic || !o.folderMode)) {
+        o.error = "--vscode requires --magicFolder."; return o;
+    }
     if (o.mode == LaunchMode::Console) {
         if (positional.size() < 2 || positional.size() > 3) {
             o.error = "Usage: ScriptDeck.exe -run deckfile command [input]"; return o;
@@ -56,6 +60,7 @@ void PrintHelp()
         << "  ScriptDeck.exe [deckfile|folder|package.deckx [args...]]\n"
         << "  ScriptDeck.exe -magic [deckfile [args...]]\n"
         << "  ScriptDeck.exe --magicFolder [folder [args...]]\n"
+        << "  ScriptDeck.exe --magicFolder --vscode folder  (compact toolbar)\n"
         << "  ScriptDeck.exe -run deckfile info\n"
         << "  ScriptDeck.exe -run deckfile dump\n"
         << "  ScriptDeck.exe -run deckfile validate\n"

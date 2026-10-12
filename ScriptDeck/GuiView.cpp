@@ -30,7 +30,7 @@ bool EditColor(const char* label, std::optional<DeckColor>& color, const ImVec4&
 }
 GuiView::GuiView(const LaunchOptions& options, GuiServices services)
     : path_(options.stackFile), services_(std::move(services)),
-      magic_(options.mode == LaunchMode::Magic)
+      magic_(options.mode == LaunchMode::Magic), vscodeMode_(options.vscodeMode)
 {
     if(magic_ && DeckZip::IsDeckx(path_))throw std::runtime_error("deckx is Player-only. Magic is unavailable.");
     if(options.folderMode) {
@@ -304,51 +304,55 @@ void GuiView::New()
 }
 void GuiView::Toolbar()
 {
-    if (ImGui::Button("開く")) Open();
-    if (magic_) {
-        ImGui::SameLine(); if (ImGui::Button("新規")) New();
-        ImGui::SameLine(); if(ImGui::Button("Homeを開く")) {
-            try {
-                const auto home=EnsureHomeDeck();
-                if(CanClose())RequestDeckChange(home,false);
-            } catch(const std::exception& error) {
-                status_="Home読み込みエラー: "+std::string(error.what());
-                if(services_.reportSaveError)services_.reportSaveError(status_);
+    if (vscodeMode_ && magic_ && stack_.folderMode) {
+        if (ImGui::Button("保存")) Save(false);
+    } else {
+        if (ImGui::Button("開く")) Open();
+        if (magic_) {
+            ImGui::SameLine(); if (ImGui::Button("新規")) New();
+            ImGui::SameLine(); if(ImGui::Button("Homeを開く")) {
+                try {
+                    const auto home=EnsureHomeDeck();
+                    if(CanClose())RequestDeckChange(home,false);
+                } catch(const std::exception& error) {
+                    status_="Home読み込みエラー: "+std::string(error.what());
+                    if(services_.reportSaveError)services_.reportSaveError(status_);
+                }
             }
-        }
-        ImGui::SameLine(); if (ImGui::Button("保存")) Save(false);
-        if(!stack_.folderMode){ImGui::SameLine(); if (ImGui::Button("別名保存")) Save(true);}
-        if(!stack_.folderMode){ImGui::SameLine(); ImGui::Checkbox("実行プレビュー", &test_);}
-        ImGui::SameLine();
-        if(ImGui::Button(stack_.folderMode?"Export: 通常deck":"Export: Folder")) {
-            try {
-                auto destination=stack_.folderMode?services_.chooseFile(true):(services_.chooseFolder?services_.chooseFolder():std::filesystem::path{});
-                if(!destination.empty()) {
-                    if(!stack_.folderMode)destination/=PathFromUtf8(stack_.name);
-                    auto snapshot=stack_;snapshot.folderRoot=path_.parent_path();snapshot.Export(destination,!stack_.folderMode);
-                    status_="Export完了: "+PathToUtf8(destination);
-                }
-            } catch(const std::exception& e){status_=e.what();}
-        }
-        ImGui::SameLine();
-        if(ImGui::Button("Export: deckx")) {
-            try {
-                auto destination=services_.chooseDeckxExport?services_.chooseDeckxExport():std::filesystem::path{};
-                if(!destination.empty()) {
-                    auto snapshot=stack_;snapshot.folderRoot=path_.parent_path();snapshot.ExportDeckx(destination);
-                    status_="Export完了: "+PathToUtf8(destination);
-                }
-            }catch(const std::exception& e){status_=e.what();}
-        }
-        if(stack_.folderMode) {
+            ImGui::SameLine(); if (ImGui::Button("保存")) Save(false);
+            if(!stack_.folderMode){ImGui::SameLine(); if (ImGui::Button("別名保存")) Save(true);}
+            if(!stack_.folderMode){ImGui::SameLine(); ImGui::Checkbox("実行プレビュー", &test_);}
             ImGui::SameLine();
-            if(ImGui::Button("VSCodeを開く")) {
-                try {OpenInVSCode();}catch(const std::exception& e){status_=e.what();}
+            if(ImGui::Button(stack_.folderMode?"Export: 通常deck":"Export: Folder")) {
+                try {
+                    auto destination=stack_.folderMode?services_.chooseFile(true):(services_.chooseFolder?services_.chooseFolder():std::filesystem::path{});
+                    if(!destination.empty()) {
+                        if(!stack_.folderMode)destination/=PathFromUtf8(stack_.name);
+                        auto snapshot=stack_;snapshot.folderRoot=path_.parent_path();snapshot.Export(destination,!stack_.folderMode);
+                        status_="Export完了: "+PathToUtf8(destination);
+                    }
+                } catch(const std::exception& e){status_=e.what();}
             }
-            if(ImGui::IsItemHovered())ImGui::SetTooltip("保存してVSCodeでフォルダを開き、ScriptDeckを終了します。");
-        }
-        ImGui::SameLine(); if (ImGui::Button("Playerモードへ")) {
-            try {SetMagic(false);}catch(const std::exception& e){status_=e.what();}
+            ImGui::SameLine();
+            if(ImGui::Button("Export: deckx")) {
+                try {
+                    auto destination=services_.chooseDeckxExport?services_.chooseDeckxExport():std::filesystem::path{};
+                    if(!destination.empty()) {
+                        auto snapshot=stack_;snapshot.folderRoot=path_.parent_path();snapshot.ExportDeckx(destination);
+                        status_="Export完了: "+PathToUtf8(destination);
+                    }
+                }catch(const std::exception& e){status_=e.what();}
+            }
+            if(stack_.folderMode) {
+                ImGui::SameLine();
+                if(ImGui::Button("VSCodeを開く")) {
+                    try {OpenInVSCode();}catch(const std::exception& e){status_=e.what();}
+                }
+                if(ImGui::IsItemHovered())ImGui::SetTooltip("保存してVSCodeでフォルダを開き、ScriptDeckを終了します。");
+            }
+            ImGui::SameLine(); if (ImGui::Button("Playerモードへ")) {
+                try {SetMagic(false);}catch(const std::exception& e){status_=e.what();}
+            }
         }
     }
     ImGui::SameLine();
@@ -370,6 +374,28 @@ void GuiView::Toolbar()
 }
 void GuiView::Editor()
 {
+    auto requestName = [&](bool isCard, ObjectType type) {
+        createCard_ = isCard; createType_ = type; createCardId_ = stack_.currentCardId;
+        const auto base = isCard ? std::string("Card") : ObjectTypeName(type);
+        for (std::size_t n = 1;; ++n) {
+            createName_ = base + std::to_string(n);
+            bool used = false;
+            if (isCard) {
+                for (const auto& c : stack_.cards) if(c.name == createName_) used = true;
+            } else if (const auto* c = Current()) {
+                for (const auto& o : c->objects) if(o.name == createName_) used = true;
+            }
+            if (stack_.folderMode && (isCard || HasObjectScriptEvent(type))) {
+                const auto file = isCard ? createName_ : Current()->name + "_" + createName_;
+                used |= std::filesystem::exists(stack_.folderRoot / "script" / PathFromUtf8(file + ".js"));
+            }
+            if (!used) break;
+        }
+        createPreviousSelection_ = selected_; selected_.clear();
+        createError_.clear(); createFocus_ = true;
+        ImGui::OpenPopup("新規作成の名前");
+    };
+
     auto orderControls = [&](const char* scope, auto& items, const std::string& selectedId) {
         ImGui::PushID(scope);
         auto selected = std::find_if(items.begin(), items.end(), [&](const auto& item) { return item.id == selectedId; });
@@ -429,8 +455,7 @@ void GuiView::Editor()
     }
     orderControls("cardOrder", stack_.cards, stack_.currentCardId);
     if (ImGui::Button("カード追加")) {
-        try {stack_.currentCardId = stack_.AddCard("新しいカード").id; selected_.clear(); dirty_ = true;}
-        catch(const std::exception& e){status_=e.what();}
+        requestName(true, ObjectType::Button);
     }
     ImGui::SameLine();
     ImGui::BeginDisabled(stack_.cards.size() <= 1);
@@ -465,10 +490,41 @@ void GuiView::Editor()
     for (int i = 0; i < static_cast<int>(sizeof(types)/sizeof(types[0])); ++i) {
         if (i && i != 4 && i != 7 && i != 9) ImGui::SameLine();
         if (ImGui::Button(ObjectTypeName(types[i]).c_str())) {
-            try {selected_ = stack_.AddObject(card->id, types[i], ObjectTypeName(types[i])).id; dirty_ = true;}
-            catch(const std::exception& e){status_=e.what();}
+            requestName(false, types[i]);
         }
     }
+    if (ImGui::BeginPopupModal("新規作成の名前", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::TextUnformatted(createCard_ ? "カード名（日本語も使用できます）" : "オブジェクト名（日本語も使用できます）");
+        if (createFocus_) { ImGui::SetKeyboardFocusHere(); createFocus_ = false; }
+        ImGui::SetNextItemWidth(320);
+        const bool enter = ImGui::InputText("##create-name", &createName_, ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll);
+        if (!createError_.empty()) ImGui::TextWrapped("%s", createError_.c_str());
+        if (ImGui::Button("作成") || enter) {
+            try {
+                if (createName_.find_first_not_of(" \t\r\n") == std::string::npos)
+                    throw std::runtime_error("名前を入力してください。");
+                if (createCard_) {
+                    for(const auto& c:stack_.cards)if(c.name==createName_)throw std::runtime_error("同じ名前のカードがあります。");
+                    stack_.currentCardId = stack_.AddCard(createName_).id; selected_.clear();
+                } else {
+                    const auto* target=stack_.FindCard(createCardId_);
+                    if(!target)throw std::runtime_error("追加先のカードが見つかりません。");
+                    for(const auto& o:target->objects)if(o.name==createName_)throw std::runtime_error("同じ名前のオブジェクトがあります。");
+                    selected_ = stack_.AddObject(createCardId_, createType_, createName_).id;
+                    focusCreatedName_ = true;
+                }
+                dirty_ = true; ImGui::CloseCurrentPopup();
+            } catch(const std::exception& e) { createError_ = e.what(); }
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("キャンセル") || ImGui::IsKeyPressed(ImGuiKey_Escape,false)) {
+            selected_ = createPreviousSelection_; ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
+    // Adding a card may reallocate the card vector.
+    card = Current();
+    if (!card) return;
     ImGui::SeparatorText("部品一覧");
     for (const auto& o : card->objects) {
         ImGui::PushID(o.id.c_str());
@@ -480,6 +536,9 @@ void GuiView::Editor()
     if (CardObject* o = card->FindObject(selected_)) {
         ImGui::SeparatorText("プロパティ");
         ImGui::Text("ID: %s (%s)", o->id.c_str(), ObjectTypeName(o->type).c_str());
+        if (focusCreatedName_ && !ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel)) {
+            ImGui::SetKeyboardFocusHere(); focusCreatedName_ = false;
+        }
         rename("名前","object",card->id,o->id,o->name);
         if (o->type != ObjectType::Listbox && o->type != ObjectType::DropdownList) {
             ImGui::TextUnformatted("文字");
@@ -559,7 +618,7 @@ void GuiView::Editor()
                 }
             }
         }
-        if(!stack_.folderMode && ImGui::Button("部品スクリプトを編集")) {BeginScriptEditor("object",card->id,o->id);return;}
+        if(!stack_.folderMode && HasObjectScriptEvent(o->type) && ImGui::Button("部品スクリプトを編集")) {BeginScriptEditor("object",card->id,o->id);return;}
         if(ImGui::Button("部品複製")) {
             try {selected_=stack_.DuplicateObject(card->id,o->id).id;dirty_=true;}
             catch(const std::exception& e){status_=e.what();}

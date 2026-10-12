@@ -12,9 +12,9 @@ Playerで実行し、Magicで画面やプロパティを編集します。
 
 Folder DeckのコードをVSCodeで編集する場合は、ScriptDeck拡張をインストールしてください。
 
-1. [ScriptDeck拡張のVSIX](vscode-scriptdeck/scriptdeck-0.1.1.vsix)を保存します。
+1. [ScriptDeck拡張のVSIX](vscode-scriptdeck/scriptdeck-0.1.3.vsix)を保存します。
 2. VSCodeを開き、左側の「拡張機能」を選択します（`Ctrl+Shift+X`）。
-3. 拡張機能画面の「…」から「VSIXからのインストール…」を選び、保存した`scriptdeck-0.1.1.vsix`を指定します。再読み込みを求められた場合は実行してください。
+3. 拡張機能画面の「…」から「VSIXからのインストール…」を選び、保存した`scriptdeck-0.1.3.vsix`を指定します。再読み込みを求められた場合は実行してください。
 4. `Ctrl+Shift+P`でコマンドパレットを開き、「ScriptDeck: ScriptDeck.exeを登録」を実行して、使用する`ScriptDeck.exe`を選びます。
 5. VSCodeの「ファイル」→「フォルダーを開く」で、編集する`main.deck`のあるフォルダーを開きます。
 

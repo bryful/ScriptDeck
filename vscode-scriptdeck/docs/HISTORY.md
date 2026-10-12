@@ -8,14 +8,14 @@
 
 | 分類 | 更新内容 | 仕様 |
 | --- | --- | --- |
-| VSCode拡張 | 8コマンド、Deckツリー、API補完・ホバー説明。ScriptDeck.exeの登録、未設定時の選択、設定保存とキャンセル。 | [USER_GUIDE.md](USER_GUIDE.md) |
+| VSCode拡張 | 拡張からのMagic起動時は保存・前・次のみの上部ボタン。8コマンド、Deckツリー、API補完・ホバー説明。ScriptDeck.exeの登録、未設定時の選択、設定保存とキャンセル。 | [USER_GUIDE.md](USER_GUIDE.md) |
 | Home・VSCode連携 | 新規フォルダーデッキのボタン、Folderの保存後にVSCodeを開いて終了するボタン。 | [USER_GUIDE.md](USER_GUIDE.md) |
 | Folder・外部JS | main.deck固定、外部JS、VSCodeとの分担、名前変更の衝突拒否、Magicでの複製。 | [FILE_FORMATS.md](FILE_FORMATS.md) |
 | Export・リソース | 画像・data配下のコピー、参照更新、同名別画像の区別、出力前の検証。 | [FILE_FORMATS.md](FILE_FORMATS.md) |
 | deckx | 無圧縮ZIPへのExport、Player再生、保存時のZIP置換、Magic禁止。 | [FILE_FORMATS.md](FILE_FORMATS.md) |
 | 関連付け | deckx専用アイコン、.deck/.deckxの登録・元設定の復元。 | [USER_GUIDE.md](USER_GUIDE.md) |
 | フォルダ構成 | ルートにScriptDeck.slnx、ソースをScriptDeck/、説明書をdoc/へ整理。 | [README.md](../README.md) |
-| スクリプト編集 | 作業領域全体のエディタ、Tab、保存ショートカット、空スクリプトの雛形。 | [USER_GUIDE.md](USER_GUIDE.md) |
+| スクリプト編集 | 通常Magicの新規作成・空コード編集とFolder Exportのイベント雛形。専用イベントのない部品は編集ボタンと新規外部JSを省略。作業領域全体のエディタ、Tab、保存ショートカット。 | [USER_GUIDE.md](USER_GUIDE.md) |
 | 状態変更 | Listbox／DropdownListのchangeと選択前後のスナップショット。RadioButton／Checkboxもchangeに対応。 | [SCRIPT_API.md](SCRIPT_API.md) |
 | Deckの入出力 | openDeck／saveDeck／saveAsDeck、新規Deck、指定ファイル不存在時の起動処理。 | [NAVIGATION_API.md](NAVIGATION_API.md) |
 | 終了時保存 | Playerは未保存変更を自動保存。Magicは破棄確認。保存失敗時は終了を止めて内容を維持。 | [USER_GUIDE.md](USER_GUIDE.md) |
