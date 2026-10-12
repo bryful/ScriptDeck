@@ -1,8 +1,8 @@
 # ファイル・パスAPI
 
-更新日：2026-10-08
+更新日：2026-10-12
 
-PlayerとMagicの実行プレビューで利用できます。相対パスは起動時のカレントフォルダ基準です。不正な引数はTypeError、操作失敗は例外になります。
+Playerと通常DeckのMagic実行プレビューで利用できます。相対パスは通常・Folderでは起動時のカレントフォルダ、deckxでは展開先基準です。不正な引数はTypeError、操作失敗は例外になります。
 
 ## ファイル
 
@@ -50,7 +50,7 @@ if (destination !== null) fs.writeText(destination, "Test", true); // UTF-8 BOM�
 | オプション | 型・動作 |
 |---|---|
 | title | string、ダイアログのタイトル |
-| initialDirectory | string、初期フォルダ。相対パスは起動時のカレントフォルダ基準 |
+| initialDirectory | string、初期フォルダ。相対パスは通常・Folderでは起動時のカレントフォルダ、deckxでは展開先基準 |
 | defaultName | string、初期ファイル名。フォルダはinitialDirectoryで指定 |
 | defaultExtension | string、既定拡張子。先頭のドットは省略可 |
 | filters | `{name, pattern}`の配列。省略時は全ファイル |
@@ -113,9 +113,11 @@ alert(new Date(info.modifiedTime).toLocaleString());
 if (info.createdTime !== null) alert(new Date(info.createdTime));
 ```
 
-存在しないパスや読み取り失敗は例外です。相対パスは起動時のカレントフォルダ基準です。サイズはJavaScriptのnumberのため、2^53を超える値の整数精度は保証しません。
+存在しないパスや読み取り失敗は例外です。相対パスは通常・Folderでは起動時のカレントフォルダ、deckxでは展開先基準です。サイズはJavaScriptのnumberのため、2^53を超える値の整数精度は保証しません。
 
 
 ## Deckファイルとの使い分け
 
 fs.readText／writeTextはファイル内容を読み書きするだけで、現在のDeckや画面は切り替えません。Deckとして読み込む・保存するにはopenDeck／saveDeck／saveAsDeckを使用してください。詳細は [NAVIGATION_API.md](NAVIGATION_API.md) にまとめています。環境変数と外部プロセスは [APP_API.md](APP_API.md) を参照してください。
+
+形式ごとの保存・相対パスの一覧は[Deck形式・Export](FILE_FORMATS.md)を参照してください。

@@ -1,4 +1,5 @@
-﻿#include "GuiView.h"
+#include "GuiView.h"
+#include "VSCodeLauncher.h"
 #include "WindowState.h"
 #include "AppScriptApi.h"
 #include "ConsoleMode.h"
@@ -100,7 +101,7 @@ static std::filesystem::path ChooseFile(HWND hwnd, bool save, bool image = false
     OPENFILENAMEW ofn{};
     ofn.lStructSize = sizeof(ofn); ofn.hwndOwner = hwnd;
     ofn.lpstrFilter = image ? L"Images (*.png;*.jpg;*.jpeg;*.bmp;*.gif)\0*.png;*.jpg;*.jpeg;*.bmp;*.gif\0All files (*.*)\0*.*\0" :
-        L"ScriptDeck (*.deck)\0*.deck\0All files (*.*)\0*.*\0";
+        L"ScriptDeck (*.deck;*.deckx)\0*.deck;*.deckx\0All files (*.*)\0*.*\0";
     ofn.lpstrFile = path; ofn.nMaxFile = 32768;
     ofn.lpstrDefExt = image ? nullptr : L"deck";
     ofn.Flags = OFN_EXPLORER | OFN_NOCHANGEDIR | OFN_PATHMUSTEXIST |
@@ -286,6 +287,19 @@ int RunGui(const LaunchOptions& options)
             throw std::runtime_error("Cannot initialize ImGui backends.");
         Images images(device.Get());
         GuiServices services;
+        services.chooseFolder=[&] {
+            FileDialogOptions settings;settings.title="Folderの親フォルダを選択";
+            auto result=ShowFolderDialog(hwnd,settings);return result?*result:std::filesystem::path{};
+        };
+        services.chooseDeckxExport=[&] {
+            FileDialogOptions settings;settings.title="deckxへExport";settings.defaultExtension="deckx";
+            settings.defaultName="Export.deckx";settings.filters={{"ScriptDeck Package","*.deckx"}};
+            auto result=ShowSaveFileDialog(hwnd,settings);return result?*result:std::filesystem::path{};
+        };
+        services.openVSCode=[&](const std::filesystem::path& folder) {
+            OpenVSCodeFolder(folder);
+            closeRequested=true;
+        };
         services.scriptFont=scriptFont;
         services.setConsoleMode = [](bool enabled) { ConsoleMode::Instance().SetEnabled(enabled); };
         services.chooseFile = [&](bool save) { return ChooseFile(hwnd, save); };
@@ -313,6 +327,7 @@ int RunGui(const LaunchOptions& options)
         scriptHost.changeDeck = [&](const std::filesystem::path& path,bool save) {view.RequestDeckChange(path,save);};
         scriptHost.goHome = [&](bool save) {view.RequestHome(save);};
         scriptHost.newDeck = [&] {view.RequestNewDeck();};
+        scriptHost.newFolderDeck = [&](const auto& folder) {return view.RequestNewFolderDeck(folder);};
         scriptHost.openDeck = [&](const std::filesystem::path& path) {view.RequestOpenDeck(path);};
         scriptHost.saveDeck = [&](const std::filesystem::path& path) {view.SaveDeck(path);};
         scriptHost.saveAsDeck = [&] {
@@ -488,6 +503,7 @@ int RunGui(const LaunchOptions& options)
             const auto& deck = view.DeckData();
             if (!scripts || scriptGeneration != view.ScriptGeneration()) {
                 auto activeHost = scriptHost;
+                if(deck.deckxMode)activeHost.workingDirectory=deck.folderRoot;
                 activeHost.model = std::make_shared<ScriptModel>([&]() -> Stack& { return view.MutableDeckData(); },
                     [&] { return view.ScriptGeneration(); }, [&] { view.NotifyScriptMutation(); });
                 scripts = std::make_unique<ScriptEngine>([&](const std::string& message) {
@@ -496,14 +512,14 @@ int RunGui(const LaunchOptions& options)
                     MessageBoxW(hwnd, text.c_str(), L"ScriptDeck", MB_OK | MB_ICONINFORMATION);
                 }, activeHost);
                 scriptGeneration = view.ScriptGeneration(); scriptCard.clear();
-                try { scripts->RunGlobal(deck.script, "deck.js"); }
+                try { scripts->RunGlobal(deck.script, deck.folderMode?deck.scriptFile:"deck.js"); }
                 catch (const std::exception& error) { view.CancelPendingDeckChange(); showScriptError(error); }
             }
             if (scripts->ExitRequested() || !view.ScriptsEnabled() || view.HasPendingDeckChange()) {view.TakeFileDropEvents();return;}
             if (scriptCard != deck.currentCardId) {
                 scriptCard = deck.currentCardId;
                 if (const auto* card = deck.FindCard(scriptCard)) {
-                    try { scripts->RunScoped(card->script, card->id + "/card.js", "openCard", card->id); }
+                    try { scripts->RunScoped(card->script, deck.folderMode?card->scriptFile:card->id + "/card.js", "openCard", card->id); }
                     catch (const std::exception& error) { view.CancelPendingDeckChange(); showScriptError(error); }
                 }
             }
@@ -526,14 +542,14 @@ int RunGui(const LaunchOptions& options)
                               {"previousSelectedIndex",event.previousSelectedIndex},{"previousSelectedText",event.previousSelectedText}};
                     else continue;
                 }
-                try { scripts->RunScoped(button->script, card->id + "/" + button->id + ".js", event.handler, card->id, button->id,data); }
+                try { scripts->RunScoped(button->script, deck.folderMode?button->scriptFile:card->id + "/" + button->id + ".js", event.handler, card->id, button->id,data); }
                 catch (const std::exception& error) { view.CancelPendingDeckChange(); showScriptError(error); }
             }
             for(const auto& event:view.TakeFileDropEvents()) {
                 if(scripts->ExitRequested()||!view.ScriptsEnabled()||view.HasPendingDeckChange())break;
                 if(event.cardId!=deck.currentCardId || event.generation!=view.ScriptGeneration())continue;
                 const auto* card=deck.FindCard(event.cardId);if(!card)continue;
-                try {scripts->RunScoped(card->script,card->id+"/card.js","dropFiles",card->id,"",
+                try {scripts->RunScoped(card->script,deck.folderMode?card->scriptFile:card->id+"/card.js","dropFiles",card->id,"",
                     {{"paths",event.paths},{"x",event.x},{"y",event.y}});}
                 catch(const std::exception& error){view.CancelPendingDeckChange();showScriptError(error);}
             }

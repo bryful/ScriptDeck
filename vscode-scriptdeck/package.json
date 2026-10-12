@@ -1,0 +1,86 @@
+{
+  "name": "scriptdeck",
+  "displayName": "ScriptDeck",
+  "description": "Folder Deckの再生、Magic、エクスポート、API補完",
+  "version": "0.1.1",
+  "publisher": "scriptdeck",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Other"
+  ],
+  "main": "./extension.js",
+  "activationEvents": [
+    "workspaceContains:**/main.deck"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false,
+      "description": "ScriptDeckはJavaScriptとファイルAPIを実行します。"
+    },
+    "virtualWorkspaces": false
+  },
+  "extensionKind": [
+    "workspace"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "scriptdeck.registerExecutable",
+        "title": "ScriptDeck: ScriptDeck.exeを登録"
+      },
+      {
+        "command": "scriptdeck.newFolder",
+        "title": "ScriptDeck: 新規フォルダーデッキ"
+      },
+      {
+        "command": "scriptdeck.play",
+        "title": "ScriptDeck: 再生"
+      },
+      {
+        "command": "scriptdeck.magic",
+        "title": "ScriptDeck: Magicで開く"
+      },
+      {
+        "command": "scriptdeck.stop",
+        "title": "ScriptDeck: 終了"
+      },
+      {
+        "command": "scriptdeck.exportDeck",
+        "title": "ScriptDeck: deckへエクスポート"
+      },
+      {
+        "command": "scriptdeck.exportDeckx",
+        "title": "ScriptDeck: deckxへエクスポート"
+      },
+      {
+        "command": "scriptdeck.reference",
+        "title": "ScriptDeck: APIリファレンスを開く"
+      }
+    ],
+    "views": {
+      "explorer": [
+        {
+          "id": "scriptdeck.decks",
+          "name": "ScriptDeck"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "ScriptDeck",
+      "properties": {
+        "scriptdeck.executablePath": {
+          "type": "string",
+          "default": "",
+          "description": "ScriptDeck.exeの絶対パス。未設定の場合は起動・エクスポート時に選択して登録します。"
+        }
+      }
+    }
+  }
+}

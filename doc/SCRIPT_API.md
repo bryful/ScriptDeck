@@ -1,8 +1,15 @@
 # JavaScript・イベント
 
-更新日：2026-10-08
+更新日：2026-10-12
 
-JavaScriptエンジンはQuickJS-NGです。共有の組み込みAPIとして `app` / `fs` / `alert` を使用できます。Magicの通常の編集状態ではスクリプトを実行せず、PlayerとMagicの実行プレビューで実行します。
+JavaScriptエンジンはQuickJS-NGです。共有の組み込みAPIとして `app` / `fs` / `alert` を使用できます。Magicの通常の編集状態ではスクリプトを実行せず、Playerと通常DeckのMagic実行プレビューで実行します。FolderのMagicでは実行せず、コード編集も行いません。
+
+## スクリプトの保存場所
+
+通常Deckは`script`にコードを内蔵し、Folderは`scriptFile`で外部JSを参照します。
+FolderのJSはScriptDeckを終了してVSCodeで編集し、Playerの再起動で読み込みます。
+deckxへのExportでは最新の外部JSを内蔵へ変換します。保存形式によってイベントの仕様は変わりません。
+詳細は[Deck形式・Export](FILE_FORMATS.md)を参照してください。
 
 ## 実行タイミング
 
@@ -131,3 +138,5 @@ function mouseUp(event) {
 JavaScriptメモリー上限は64 MiB、実行時間上限は2秒です。ダイアログやネイティブ入出力の待機時間は除外します。スクリプトエラーはソース名と詳細を含むダイアログで表示します。組み込み関数の失敗はtry/catchでも処理できます。
 
 カード・Deckの移動は [NAVIGATION_API.md](NAVIGATION_API.md)、部品の読み書きは [OBJECT_API.md](OBJECT_API.md)、組み込みAPIは [APP_API.md](APP_API.md) と [FILE_API.md](FILE_API.md) を参照してください。
+
+形式ごとの保存・相対パスの一覧は[Deck形式・Export](FILE_FORMATS.md)を参照してください。

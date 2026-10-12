@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "Stack.h"
 #include "nlohmann/json.hpp"
 #include <optional>
@@ -9,6 +9,9 @@
 struct GuiServices
 {
     std::function<std::filesystem::path(bool)> chooseFile;
+    std::function<std::filesystem::path()> chooseFolder;
+    std::function<std::filesystem::path()> chooseDeckxExport;
+    std::function<void(const std::filesystem::path&)> openVSCode;
     std::function<bool()> discardChanges;
     std::function<void(const std::string&)> reportSaveError;
     std::function<std::filesystem::path()> chooseImage;
@@ -49,6 +52,8 @@ public:
     void RequestDeckChange(const std::filesystem::path& path, bool saveCurrent=true);
     void RequestHome(bool saveCurrent=true);
     void RequestNewDeck();
+    bool RequestNewFolderDeck(const std::filesystem::path& folder={});
+    void OpenInVSCode();
     void RequestOpenDeck(const std::filesystem::path& path={});
     void SaveDeck(const std::filesystem::path& path={});
     bool HasPendingDeckChange() const { return pendingDeck_.has_value(); }
@@ -61,7 +66,7 @@ public:
     void NotifyScriptMutation() { dirty_ = true; }
     const Stack& DeckData() const { return stack_; }
     unsigned long long ScriptGeneration() const { return scriptGeneration_; }
-    bool ScriptsEnabled() const { return !scriptEditing_ && (!magic_ || test_); }
+    bool ScriptsEnabled() const { return !scriptEditing_ && (!magic_ || (test_ && !stack_.folderMode)); }
     void BeginScriptEditor(const std::string& kind, const std::string& cardId={}, const std::string& objectId={});
     void EndScriptEditor();
     bool IsScriptEditorOpen() const { return scriptEditing_; }
@@ -75,7 +80,7 @@ public:
     int CardHeight() const { return stack_.height; }
     const std::string& DeckName() const { return stack_.name; }
 private:
-    struct PendingDeck { Stack data; std::filesystem::path path; bool saveCurrent; bool isNew = false; };
+    struct PendingDeck { Stack data; std::filesystem::path path; bool saveCurrent; bool isNew = false; bool isNewFolder = false; };
     std::optional<PendingDeck> pendingDeck_;
     Stack stack_;
     std::filesystem::path path_;

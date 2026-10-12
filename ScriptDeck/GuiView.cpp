@@ -1,9 +1,11 @@
-﻿#include "GuiView.h"
+#include "GuiView.h"
+#include "DeckArchive.h"
 #include "HomeDeck.h"
 #include "Utf8Path.h"
 #include "imgui_stdlib.h"
 #include "imgui_internal.h"
 #include <sstream>
+#include <map>
 #include <algorithm>
 #include <utility>
 #include <stdexcept>
@@ -30,15 +32,31 @@ GuiView::GuiView(const LaunchOptions& options, GuiServices services)
     : path_(options.stackFile), services_(std::move(services)),
       magic_(options.mode == LaunchMode::Magic)
 {
+    if(magic_ && DeckZip::IsDeckx(path_))throw std::runtime_error("deckx is Player-only. Magic is unavailable.");
+    if(options.folderMode) {
+        if(path_.empty()) {
+            if(!services_.chooseFolder)throw std::runtime_error("Select a Folder destination.");
+            path_=services_.chooseFolder();
+            if(path_.empty())throw std::runtime_error("Folder creation cancelled.");
+            path_/="Untitled";
+        }
+        if(!std::filesystem::exists(path_)) {
+            stack_.CreateFolder(path_);path_=stack_.folderRoot/"main.deck";return;
+        }
+        if(!std::filesystem::is_directory(path_))throw std::runtime_error("--magicFolder requires a Folder path.");
+        path_/="main.deck";
+    } else if(std::filesystem::is_directory(path_))path_/="main.deck";
     const bool useHome=path_.empty();
     if(useHome)path_=EnsureHomeDeck();
     path_=std::filesystem::absolute(path_).lexically_normal();
     if(!std::filesystem::exists(path_) && magic_ && !useHome) {
         stack_.CreateNew(PathToUtf8(path_.stem()));
         if(!stack_.Save(path_))throw std::runtime_error("Cannot create deck: "+stack_.LastError());
-    } else if(!stack_.Load(path_)) {
+    } else if(!stack_.Load(path_, !magic_)) {
         throw std::runtime_error("Cannot load deck: "+stack_.LastError());
     }
+    if(options.folderMode && !stack_.folderMode)throw std::runtime_error("Not a Folder deck. Use Export to convert.");
+    if(magic_ && !options.folderMode && stack_.folderMode)throw std::runtime_error("Use --magicFolder to edit Folder decks.");
 }
 bool GuiView::NavigateCard(const std::string& action, const nlohmann::json& target)
 {
@@ -78,10 +96,33 @@ bool GuiView::NavigateCard(const std::string& action, const nlohmann::json& targ
 }
 void GuiView::RequestNewDeck()
 {
+    if(stack_.folderMode)throw std::runtime_error("Create a Folder deck through Magic Folder.");
     if(pendingDeck_)throw std::runtime_error("A deck change is already pending.");
     if(dirty_&&path_.empty())throw std::runtime_error("Save the current deck before creating a new deck.");
     Stack candidate;candidate.CreateNew();
     pendingDeck_=PendingDeck{std::move(candidate),{},!path_.empty(),true};
+}
+bool GuiView::RequestNewFolderDeck(const std::filesystem::path& folder)
+{
+    if(pendingDeck_)throw std::runtime_error("A deck change is already pending.");
+    if(dirty_&&path_.empty())throw std::runtime_error("Save the current deck before creating a Folder deck.");
+    auto destination=folder;
+    if(destination.empty()) {
+        if(!services_.chooseFolder)throw std::runtime_error("Folder dialog is unavailable.");
+        auto parent=services_.chooseFolder();if(parent.empty())return false;
+        destination=parent/"Untitled";
+    }
+    destination=std::filesystem::absolute(destination).lexically_normal();
+    if(std::filesystem::exists(destination))throw std::runtime_error("Folder already exists: "+PathToUtf8(destination));
+    pendingDeck_=PendingDeck{Stack{},destination/"main.deck",!path_.empty(),false,true};
+    return true;
+}
+void GuiView::OpenInVSCode()
+{
+    if(!magic_||!stack_.folderMode||stack_.deckxMode)throw std::runtime_error("VSCode is available in Magic Folder only.");
+    if(!services_.openVSCode)throw std::runtime_error("VSCode launch service is unavailable.");
+    SaveDeck();
+    services_.openVSCode(stack_.folderRoot);
 }
 void GuiView::RequestHome(bool saveCurrent)
 {
@@ -91,9 +132,11 @@ void GuiView::RequestDeckChange(const std::filesystem::path& path, bool saveCurr
 {
     if(pendingDeck_)throw std::runtime_error("A deck change is already pending.");
     if(path.empty())throw std::invalid_argument("Deck path is empty.");
-    const auto destination=std::filesystem::absolute(path).lexically_normal();
+    auto destination=std::filesystem::absolute(path).lexically_normal();
+    if(std::filesystem::is_directory(destination))destination/="main.deck";
     Stack candidate;
-    if(!candidate.Load(destination))throw std::runtime_error("Cannot load deck: "+candidate.LastError());
+    if(!candidate.Load(destination,!magic_))throw std::runtime_error("Cannot load deck: "+candidate.LastError());
+    if(magic_ && candidate.deckxMode)throw std::runtime_error("deckx is Player-only. Magic is unavailable.");
     if(saveCurrent && path_.empty())throw std::runtime_error("Current deck has no save path; save it first or pass false.");
     pendingDeck_=PendingDeck{std::move(candidate),destination,saveCurrent};
 }
@@ -109,6 +152,9 @@ void GuiView::SaveDeck(const std::filesystem::path& path)
     const auto destination=path.empty()?path_:path;
     if(destination.empty())throw std::runtime_error("Current deck has no save path; use saveAsDeck().");
     const auto absolute=std::filesystem::absolute(destination).lexically_normal();
+    if(!stack_.folderMode && !stack_.deckxMode && std::filesystem::exists(absolute)) {
+        Stack existing;if(existing.Load(absolute,false)&&existing.folderMode)throw std::runtime_error("Cannot overwrite Folder deck with ordinary deck. Use Export.");
+    }
     if(!stack_.Save(absolute))throw std::runtime_error("Cannot save deck: "+stack_.LastError());
     path_=absolute;dirty_=false;status_.clear();
 }
@@ -119,13 +165,15 @@ bool GuiView::ApplyPendingDeckChange()
     if(request.saveCurrent) {
         if(!stack_.Save(path_))throw std::runtime_error("Cannot save current deck: "+stack_.LastError());
         // Same-path reload must use the version just saved, rather than its previous contents.
-        if(!request.path.empty() && std::filesystem::equivalent(path_,request.path) && !request.data.Load(request.path))
+        if(!request.isNewFolder && !request.path.empty() && std::filesystem::equivalent(path_,request.path) && !request.data.Load(request.path,!magic_))
             throw std::runtime_error("Cannot reload saved deck: "+request.data.LastError());
     }
+    if(request.isNewFolder)request.data.CreateFolder(request.path.parent_path());
     EndScriptEditor();
     stack_=std::move(request.data);path_=std::move(request.path);
     ++scriptGeneration_;buttonEvents_.clear();fileDropEvents_.clear();selected_.clear();status_.clear();dirty_=false;
     if(request.isNew){dirty_=true;SetMagic(true);}
+    if(request.isNewFolder)SetMagic(true);
     drawnCardId_.clear();
     scriptConsoleOpen_=false;consoleCommands_.clear();
     if(ImGui::GetCurrentContext())ImGui::ClearActiveID();
@@ -135,7 +183,7 @@ std::string GuiView::WindowTitle() const
 {
     const std::string name = stack_.name.empty() ? "ScriptDeck" : stack_.name;
     if (!magic_) return name;
-    return name + " - Magic" + (dirty_ ? " *" : "");
+    return name + (stack_.folderMode ? " - Magic Folder" : " - Magic") + (dirty_ ? " *" : "");
 }
 std::vector<ButtonEvent> GuiView::TakeButtonEvents()
 {
@@ -180,7 +228,9 @@ void GuiView::SetConsoleMode(bool enabled)
 }
 void GuiView::SetMagic(bool enabled)
 {
+    if(enabled && stack_.deckxMode)throw std::runtime_error("deckx is Player-only. Magic is unavailable.");
     if (magic_ == enabled) return;
+    if(!enabled && stack_.folderMode)stack_.LoadExternalScripts();
     EndScriptEditor();
     magic_ = enabled;
     scriptConsoleOpen_ = false;consoleCommands_.clear();
@@ -220,6 +270,7 @@ bool GuiView::CanClose()
 }
 bool GuiView::Save(bool saveAs)
 {
+    if(stack_.folderMode && saveAs){status_="Folder形式の別名保存はExportを使用してください。";return false;}
     auto destination = path_;
     if (saveAs || destination.empty()) destination = services_.chooseFile(true);
     if (destination.empty()) return false;
@@ -232,11 +283,12 @@ void GuiView::Open()
     const auto source = services_.chooseFile(false);
     if (source.empty()) return;
     Stack candidate;
-    if (!candidate.Load(source)) { status_ = "読み込みエラー: " + candidate.LastError(); return; }
+    if (!candidate.Load(source,!magic_)) { status_ = "読み込みエラー: " + candidate.LastError(); return; }
+    if(magic_ && candidate.deckxMode){status_="deckxはPlayer専用です。Magicでは開けません。";return;}
     if (!CanClose()) return;
     pendingDeck_.reset();
     ++scriptGeneration_;fileDropEvents_.clear();buttonEvents_.clear();
-    stack_ = std::move(candidate); path_ = source; selected_.clear(); dirty_ = false;
+    stack_ = std::move(candidate); path_ = stack_.deckxMode?stack_.archivePath:stack_.folderMode?stack_.folderRoot/"main.deck":source; selected_.clear(); dirty_ = false;
     status_ = "開きました: " + PathToUtf8(path_);
 }
 void GuiView::New()
@@ -244,7 +296,11 @@ void GuiView::New()
     if (!CanClose()) return;
     pendingDeck_.reset();
     ++scriptGeneration_;fileDropEvents_.clear();buttonEvents_.clear();
-    stack_.CreateNew(); path_.clear(); selected_.clear(); dirty_ = true; status_.clear();
+    if(stack_.folderMode) {
+        try {auto parent=services_.chooseFolder?services_.chooseFolder():std::filesystem::path{};
+            if(parent.empty())return;stack_.CreateFolder(parent/"Untitled");path_=stack_.folderRoot/"main.deck";
+        } catch(const std::exception& e){status_=e.what();return;}
+    } else {stack_.CreateNew();path_.clear();} selected_.clear(); dirty_ = true; status_.clear();
 }
 void GuiView::Toolbar()
 {
@@ -261,9 +317,39 @@ void GuiView::Toolbar()
             }
         }
         ImGui::SameLine(); if (ImGui::Button("保存")) Save(false);
-        ImGui::SameLine(); if (ImGui::Button("別名保存")) Save(true);
-        ImGui::SameLine(); ImGui::Checkbox("実行プレビュー", &test_);
-        ImGui::SameLine(); if (ImGui::Button("Playerモードへ")) SetMagic(false);
+        if(!stack_.folderMode){ImGui::SameLine(); if (ImGui::Button("別名保存")) Save(true);}
+        if(!stack_.folderMode){ImGui::SameLine(); ImGui::Checkbox("実行プレビュー", &test_);}
+        ImGui::SameLine();
+        if(ImGui::Button(stack_.folderMode?"Export: 通常deck":"Export: Folder")) {
+            try {
+                auto destination=stack_.folderMode?services_.chooseFile(true):(services_.chooseFolder?services_.chooseFolder():std::filesystem::path{});
+                if(!destination.empty()) {
+                    if(!stack_.folderMode)destination/=PathFromUtf8(stack_.name);
+                    auto snapshot=stack_;snapshot.folderRoot=path_.parent_path();snapshot.Export(destination,!stack_.folderMode);
+                    status_="Export完了: "+PathToUtf8(destination);
+                }
+            } catch(const std::exception& e){status_=e.what();}
+        }
+        ImGui::SameLine();
+        if(ImGui::Button("Export: deckx")) {
+            try {
+                auto destination=services_.chooseDeckxExport?services_.chooseDeckxExport():std::filesystem::path{};
+                if(!destination.empty()) {
+                    auto snapshot=stack_;snapshot.folderRoot=path_.parent_path();snapshot.ExportDeckx(destination);
+                    status_="Export完了: "+PathToUtf8(destination);
+                }
+            }catch(const std::exception& e){status_=e.what();}
+        }
+        if(stack_.folderMode) {
+            ImGui::SameLine();
+            if(ImGui::Button("VSCodeを開く")) {
+                try {OpenInVSCode();}catch(const std::exception& e){status_=e.what();}
+            }
+            if(ImGui::IsItemHovered())ImGui::SetTooltip("保存してVSCodeでフォルダを開き、ScriptDeckを終了します。");
+        }
+        ImGui::SameLine(); if (ImGui::Button("Playerモードへ")) {
+            try {SetMagic(false);}catch(const std::exception& e){status_=e.what();}
+        }
     }
     ImGui::SameLine();
     if (ImGui::Button("< 前")) {
@@ -304,7 +390,22 @@ void GuiView::Editor()
         ImGui::PopID();
     };
 
-    if (ImGui::InputText("デッキ名", &stack_.name)) dirty_ = true;
+    auto rename=[&](const char* label,const std::string& kind,const std::string& cardId,const std::string& objectId,const std::string& current) {
+        if(!stack_.folderMode) {
+            std::string value=current;if(ImGui::InputText(label,&value)){stack_.Rename(kind,cardId,objectId,value);dirty_=true;}return;
+        }
+        // Keep a draft while typing; filesystem changes occur only on Enter.
+        const auto key=kind+cardId+objectId;
+        static std::map<std::string,std::string> drafts;
+        auto it=drafts.try_emplace(key,current).first;
+        if(ImGui::InputText(label,&it->second,ImGuiInputTextFlags_EnterReturnsTrue)) {
+            try {stack_.Rename(kind,cardId,objectId,it->second);path_=stack_.folderRoot/"main.deck";dirty_=true;status_.clear();}
+            catch(const std::exception& e){status_=e.what();it->second=current;}
+        }
+        if(!ImGui::IsItemActive())it->second=current;
+    };
+    rename("デッキ名","deck",{},{},stack_.name);
+    if(stack_.folderMode)ImGui::TextWrapped("Folder: 名前変更はEnterで確定。コードはVSCodeで編集してください。");
     int size[2] = {stack_.width, stack_.height};
     if (ImGui::InputInt2("画面サイズ", size)) {
         stack_.width = std::clamp(size[0], 64, 8192); stack_.height = std::clamp(size[1], 64, 8192); dirty_ = true;
@@ -328,7 +429,8 @@ void GuiView::Editor()
     }
     orderControls("cardOrder", stack_.cards, stack_.currentCardId);
     if (ImGui::Button("カード追加")) {
-        stack_.currentCardId = stack_.AddCard("新しいカード").id; selected_.clear(); dirty_ = true;
+        try {stack_.currentCardId = stack_.AddCard("新しいカード").id; selected_.clear(); dirty_ = true;}
+        catch(const std::exception& e){status_=e.what();}
     }
     ImGui::SameLine();
     ImGui::BeginDisabled(stack_.cards.size() <= 1);
@@ -341,7 +443,7 @@ void GuiView::Editor()
     ImGui::EndDisabled();
     Card* card = Current();
     if (!card) return;
-    if (ImGui::InputText("カード名", &card->name)) dirty_ = true;
+    rename("カード名","card",card->id,{},card->name);
     dirty_ |= ImGui::ColorEdit4("カード背景色", card->backgroundColor.data(), ImGuiColorEditFlags_AlphaPreviewHalf);
     auto keyboardButton = [&](const char* label, std::string& target) {
         const auto* selected = card->FindObject(target);
@@ -363,7 +465,8 @@ void GuiView::Editor()
     for (int i = 0; i < static_cast<int>(sizeof(types)/sizeof(types[0])); ++i) {
         if (i && i != 4 && i != 7 && i != 9) ImGui::SameLine();
         if (ImGui::Button(ObjectTypeName(types[i]).c_str())) {
-            selected_ = stack_.AddObject(card->id, types[i], ObjectTypeName(types[i])).id; dirty_ = true;
+            try {selected_ = stack_.AddObject(card->id, types[i], ObjectTypeName(types[i])).id; dirty_ = true;}
+            catch(const std::exception& e){status_=e.what();}
         }
     }
     ImGui::SeparatorText("部品一覧");
@@ -377,7 +480,7 @@ void GuiView::Editor()
     if (CardObject* o = card->FindObject(selected_)) {
         ImGui::SeparatorText("プロパティ");
         ImGui::Text("ID: %s (%s)", o->id.c_str(), ObjectTypeName(o->type).c_str());
-        dirty_ |= ImGui::InputText("名前", &o->name);
+        rename("名前","object",card->id,o->id,o->name);
         if (o->type != ObjectType::Listbox && o->type != ObjectType::DropdownList) {
             ImGui::TextUnformatted("文字");
             if (o->type == ObjectType::InputBox) {
@@ -456,7 +559,13 @@ void GuiView::Editor()
                 }
             }
         }
-        if(ImGui::Button("部品スクリプトを編集")) {BeginScriptEditor("object",card->id,o->id);return;}
+        if(!stack_.folderMode && ImGui::Button("部品スクリプトを編集")) {BeginScriptEditor("object",card->id,o->id);return;}
+        if(ImGui::Button("部品複製")) {
+            try {selected_=stack_.DuplicateObject(card->id,o->id).id;dirty_=true;}
+            catch(const std::exception& e){status_=e.what();}
+            return;
+        }
+        if(stack_.folderMode)ImGui::TextWrapped("JS: %s",o->scriptFile.c_str());
         if (ImGui::Button("部品削除")) {
             const auto id = selected_;
             if (card->enterButtonId == id) card->enterButtonId.clear();
@@ -466,8 +575,8 @@ void GuiView::Editor()
             selected_.clear(); dirty_ = true;
         }
     }
-    if(ImGui::Button("カードスクリプトを編集")) {BeginScriptEditor("card",card->id);return;}
-    if(ImGui::Button("Deckスクリプトを編集")) {BeginScriptEditor("deck");return;}
+    if(!stack_.folderMode && ImGui::Button("カードスクリプトを編集")) {BeginScriptEditor("card",card->id);return;}
+    if(!stack_.folderMode && ImGui::Button("Deckスクリプトを編集")) {BeginScriptEditor("deck");return;}
     ImGui::TextWrapped("Player／実行プレビューでJavaScriptを実行します。app／fs／alert APIが利用できます。");
 }
 void GuiView::Canvas()
@@ -543,7 +652,7 @@ void GuiView::Canvas()
                 if (services_.resourceImage && !o.resourceId.empty()) texture = services_.resourceImage(o.resourceId);
             } else {
                 auto imagePath = PathFromUtf8(o.imagePath);
-                if (imagePath.is_relative()) imagePath = (path_.empty() ? std::filesystem::current_path() : path_.parent_path()) / imagePath;
+                if (imagePath.is_relative()) imagePath = (stack_.deckxMode?stack_.folderRoot:path_.empty() ? std::filesystem::current_path() : path_.parent_path()) / imagePath;
                 if (!o.imagePath.empty()) texture = services_.image(imagePath);
             }
             if (texture) draw->AddImage(texture, pos, ImVec2(pos.x+extent.x,pos.y+extent.y), ImVec2(0,0), ImVec2(1,1),
@@ -727,6 +836,7 @@ std::string* GuiView::EditingScript()
 }
 void GuiView::BeginScriptEditor(const std::string& kind,const std::string& cardId,const std::string& objectId)
 {
+    if(stack_.folderMode)throw std::runtime_error("Edit Folder scripts in VSCode.");
     if(!magic_ || test_)throw std::runtime_error("Script editing requires Magic edit mode.");
     if(kind!="deck" && kind!="card" && kind!="object")throw std::invalid_argument("Invalid script target.");
     scriptEditorKind_=kind;scriptEditorCard_=cardId;scriptEditorObject_=objectId;

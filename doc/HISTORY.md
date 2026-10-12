@@ -1,6 +1,6 @@
 # 開発・変更記録
 
-更新日：2026-10-08
+更新日：2026-10-12
 
 現在の仕様は [ドキュメント目次](readme.md) のカテゴリ別文書を参照してください。以下は実装の経緯と検証範囲の記録です。
 
@@ -8,6 +8,12 @@
 
 | 分類 | 更新内容 | 仕様 |
 | --- | --- | --- |
+| VSCode拡張 | 8コマンド、Deckツリー、API補完・ホバー説明。ScriptDeck.exeの登録、未設定時の選択、設定保存とキャンセル。 | [USER_GUIDE.md](USER_GUIDE.md) |
+| Home・VSCode連携 | 新規フォルダーデッキのボタン、Folderの保存後にVSCodeを開いて終了するボタン。 | [USER_GUIDE.md](USER_GUIDE.md) |
+| Folder・外部JS | main.deck固定、外部JS、VSCodeとの分担、名前変更の衝突拒否、Magicでの複製。 | [FILE_FORMATS.md](FILE_FORMATS.md) |
+| Export・リソース | 画像・data配下のコピー、参照更新、同名別画像の区別、出力前の検証。 | [FILE_FORMATS.md](FILE_FORMATS.md) |
+| deckx | 無圧縮ZIPへのExport、Player再生、保存時のZIP置換、Magic禁止。 | [FILE_FORMATS.md](FILE_FORMATS.md) |
+| 関連付け | deckx専用アイコン、.deck/.deckxの登録・元設定の復元。 | [USER_GUIDE.md](USER_GUIDE.md) |
 | フォルダ構成 | ルートにScriptDeck.slnx、ソースをScriptDeck/、説明書をdoc/へ整理。 | [README.md](../README.md) |
 | スクリプト編集 | 作業領域全体のエディタ、Tab、保存ショートカット、空スクリプトの雛形。 | [USER_GUIDE.md](USER_GUIDE.md) |
 | 状態変更 | Listbox／DropdownListのchangeと選択前後のスナップショット。RadioButton／Checkboxもchangeに対応。 | [SCRIPT_API.md](SCRIPT_API.md) |
@@ -19,9 +25,18 @@
 
 ## 検証範囲
 
-LinuxでQuickJS-NGとヘッドレスImGuiを使用し、プロパティ、部品の動的操作、状態・選択イベント、スクリプト編集・保存、Deck入出力と切り替え、未保存状態、終了時保存と失敗時の保持を検証しています。外部プロセスはLinuxで実起動・標準出力取得・非同期起動を確認しています。
+2026-10-12にWindows x64のDebug構成をビルドし、CMake/CTestの全13件が成功しました。
+Folder・deckxの読み書き、外部JSの保持、複製、名前変更の衝突、Export、画像・データ同梱、
+Player保存、Magic禁止、不正ZIPの拒否をテストしています。
 
-Windowsでのビルド、実ウィンドウ・フォント、ネイティブダイアログ、クリップボード、レジストリ、Windows版のプロセス起動はこの環境では未確認です。
+Python標準のzipfileと相互に読み書きし、STORE方式・日本語ファイル名・画像バイト列を確認しました。
+Windowsのアイコン抽出APIで、EXE内の3種類のアイコンとdeckxのindex 2を確認しています。
+関連付けはメモリ上のレジストリを使い、元設定の復元・所有者・登録失敗時のロールバックを検証しています。
+実レジストリへの登録、Explorerからのダブルクリック、描画・音声・ネイティブダイアログの目視確認は未実施です。
+
+VSCode拡張のNode.jsテスト全6件が成功しました。未設定時の選択・キャンセル、実行ファイルの登録と再利用、ワークスペース設定の更新、起動前の保存などをモックで確認しています。通常DeckへのCLI出力は、日本語パス・外部JSの内蔵化・リソースのコピーを実行して確認しました。VSCode画面での操作確認は未実施です。
+
+過去のLinuxでの検証内容は、以下の記録を参照してください。
 
 ## 過去の記録
 

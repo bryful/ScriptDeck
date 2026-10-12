@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include <functional>
 #include <memory>
 #include <string>
@@ -18,6 +18,7 @@ struct ScriptHost
     std::function<void(const std::filesystem::path&,bool)> changeDeck;
     std::function<void(bool)> goHome;
     std::function<void()> newDeck;
+    std::function<bool(const std::filesystem::path&)> newFolderDeck;
     std::function<void(const std::filesystem::path&)> openDeck;
     std::function<void(const std::filesystem::path&)> saveDeck;
     std::function<bool()> saveAsDeck;

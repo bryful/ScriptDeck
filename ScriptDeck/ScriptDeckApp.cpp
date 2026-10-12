@@ -1,9 +1,10 @@
-﻿#ifdef _WIN32
+#ifdef _WIN32
 #include "GuiView.h"
 #endif
 #include "Utf8Path.h"
 #include "ScriptDeckApp.h"
 #include "Stack.h"
+#include "DeckArchive.h"
 #include "nlohmann/json.hpp"
 #include <iostream>
 #include <stdexcept>
@@ -56,6 +57,7 @@ int ScriptDeckApp::RunPlayer(const LaunchOptions& options)
 }
 int ScriptDeckApp::RunMagic(const LaunchOptions& options)
 {
+    if(DeckZip::IsDeckx(options.stackFile))throw std::runtime_error("deckx is Player-only. Magic is unavailable.");
     std::cout << "=== Magic Mode ===\n";
     Stack s;
     auto path = options.stackFile;
@@ -130,6 +132,14 @@ int ScriptDeckApp::RunConsole(const LaunchOptions& options)
         std::cout << json({{"name", s.name}, {"width", s.width}, {"height", s.height},
             {"cardCount", s.cards.size()}, {"objectCount", count},
             {"currentCardId", s.currentCardId}}).dump() << '\n';
+    } else if (options.command == "exportDeck") {
+        if(options.input.empty()){std::cerr<<"ERROR: Output path is required.\n";return 1;}
+        const auto destination=PathFromUtf8(options.input);s.Export(destination,false);
+        std::cout<<json({{"saved",PathToUtf8(destination)}}).dump()<<'\n';
+    } else if (options.command == "exportDeckx") {
+        if(options.input.empty()){std::cerr<<"ERROR: Output path is required.\n";return 1;}
+        const auto destination=PathFromUtf8(options.input);s.ExportDeckx(destination);
+        std::cout<<json({{"saved",PathToUtf8(destination)}}).dump()<<'\n';
     } else if (options.command == "copy") {
         if (options.input.empty()) { std::cerr << "ERROR: Output path is required.\n"; return 1; }
         const auto destination = PathFromUtf8(options.input);
@@ -140,7 +150,7 @@ int ScriptDeckApp::RunConsole(const LaunchOptions& options)
         std::cout << json({{"saved", PathToUtf8(destination)}}).dump() << '\n';
     } else {
         std::cerr << "ERROR: Unknown command: " << options.command
-                  << ". Available: info, dump, validate, copy.\n";
+                  << ". Available: info, dump, validate, copy, exportDeck, exportDeckx.\n";
         return 1;
     }
     return 0;

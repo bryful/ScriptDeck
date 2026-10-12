@@ -31,11 +31,16 @@ int main()
     const std::wstring executable=L"C:\\日本語 folder\\ScriptDeck.exe";
     MemoryRegistry registry;
     registry.Write(Extension,L"",String(L"Other.Deck"));
+    registry.Write(ArchiveExtension,L"",String(L"Other.Package"));
     const auto userChoice=L"Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\.deck\\UserChoice";
     registry.Write(userChoice,L"ProgId",String(L"UserChoice.Deck"));
     registry.Write(Extension+L"\\OpenWithProgids",L"Other.Deck",Value{});
     auto original=registry.values;
     assert(Install(registry,executable));assert(Text(registry.Read(Extension,L""))==ProgId);
+    assert(Text(registry.Read(ArchiveExtension,L""))==ArchiveProgId);
+    assert(Text(registry.Read(ArchiveTypeKey+L"\\DefaultIcon",L""))==L"\""+executable+L"\",2");
+    assert(Text(registry.Read(ArchiveTypeKey+L"\\shell\\open\\command",L""))==L"\""+executable+L"\" \"%1\"");
+    assert(Text(registry.Read(Capabilities+L"\\FileAssociations",L".deckx"))==ArchiveProgId);
     assert(Text(registry.Read(TypeKey+L"\\DefaultIcon",L""))==L"\""+executable+L"\",1");
     assert(Text(registry.Read(TypeKey+L"\\shell\\open\\command",L""))==L"\""+executable+L"\" \"%1\"");
     assert(Install(registry,executable));assert(Uninstall(registry,executable));assert(registry.values==original);assert(!Uninstall(registry,executable));
@@ -53,7 +58,7 @@ int main()
     MemoryRegistry empty;Install(empty,executable);Uninstall(empty,executable);assert(empty.values.empty());
     MemoryRegistry casing;casing.values=original;Install(casing,executable);casing.Write(Extension,L"",String(L"scriptdeck.deck"));assert(Uninstall(casing,L"c:\\日本語 folder\\scriptdeck.EXE"));assert(casing.values==original);
     // Failure at any registration write rolls back changed values.
-    for(int failure=1;failure<=16;++failure) {
+    for(int failure=1;failure<=40;++failure) {
         MemoryRegistry failed;failed.values=original;failed.failOn=failure;
         bool rejected=false;try{Install(failed,executable);}catch(const std::exception&){rejected=true;}
         if(rejected)assert(failed.values==original);else {failed.failOn=0;Uninstall(failed,executable);assert(failed.values==original);}

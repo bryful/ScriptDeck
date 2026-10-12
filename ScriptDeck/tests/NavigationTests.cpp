@@ -5,16 +5,20 @@
 #include "ScriptEngine.h"
 #include "HomeDeck.h"
 #include <cassert>
+
 #include <chrono>
 #include <fstream>
 #include <iostream>
+#undef assert
+#define assert(expression) do { if(!(expression)) { std::cerr << "Assertion failed at line " << __LINE__ << ": " << #expression << std::endl; std::exit(1); } } while(false)
 int main()
 {
+
     const auto root=std::filesystem::temp_directory_path()/PathFromUtf8("scriptdeck-navigation-日本語-"+std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
     std::filesystem::create_directories(root);
     try {
         const auto home=root/"home.deck",first=root/"first.deck",second=root/"second.deck";
-        auto blocked=first;blocked+=".tmp";
+        auto blocked=first;blocked+=".backup";
         EnsureHomeDeck(home);Stack homeData;assert(homeData.Load(home));assert(homeData.name=="Home");
         homeData.name="My Home";assert(homeData.Save(home));EnsureHomeDeck(home);assert(homeData.Load(home)&&homeData.name=="My Home");
         Stack source;source.CreateNew("First");assert(source.script==DefaultDeckScript());
@@ -70,11 +74,11 @@ check(oldCard.id==='card1');fail(()=>goCardIndex(-1));fail(()=>goCardIndex(1.5))
         try{view.RequestDeckChange(bad,true);}catch(const std::exception&){failed=true;}
         assert(failed&&!view.HasPendingDeckChange()&&view.ScriptGeneration()==before);
         // Save failure must not switch the deck.
-        {std::ofstream f(blocked);f<<"blocked";}
+        std::filesystem::rename(first,blocked);std::filesystem::create_directory(first);
         view.RequestDeckChange(second,true);failed=false;
         try{view.ApplyPendingDeckChange();}catch(const std::exception&){failed=true;}
         assert(failed&&view.DeckName()=="Same-path Saved"&&view.ScriptGeneration()==before&&!view.HasPendingDeckChange());
-        std::filesystem::remove(blocked);
+        std::filesystem::remove(first);std::filesystem::rename(blocked,first);
         view.RequestDeckChange(second,false);view.CancelPendingDeckChange();assert(!view.ApplyPendingDeckChange());
         // New runtime targets the new model generation, with home API defaults.
         host.model=std::make_shared<ScriptModel>([&]()->Stack&{return view.MutableDeckData();},[&]{return view.ScriptGeneration();},[&]{view.NotifyScriptMutation();});
@@ -95,7 +99,7 @@ check(oldCard.id==='card1');fail(()=>goCardIndex(-1));fail(()=>goCardIndex(1.5))
         fileHost.openDeck=[&](const auto& path){files.RequestOpenDeck(path);};
         fileHost.saveDeck=[&](const auto& path){files.SaveDeck(path);};
         bool cancel=true;
-        fileHost.saveAsDeck=[&]{if(cancel)return false;files.SaveDeck(root/"保存.deck");return true;};
+        fileHost.saveAsDeck=[&]{if(cancel)return false;files.SaveDeck(root/PathFromUtf8("保存.deck"));return true;};
         ScriptEngine fileJs([](const std::string&){},fileHost);
         fileJs.RunGlobal("app.deck.name='API Saved';saveDeck();", "save-deck.js");
         assert(saved.Load(first)&&saved.name=="API Saved"&&!files.HasUnsavedChanges());
@@ -121,7 +125,7 @@ check(oldCard.id==='card1');fail(()=>goCardIndex(-1));fail(()=>goCardIndex(1.5))
         missing.mode=LaunchMode::Magic;GuiView created(missing,services);
         assert(created.DeckPath()==missing.stackFile&&saved.Load(missing.stackFile)&&!created.HasUnsavedChanges());
         missing.stackFile=bad;startupFailed=false;try{GuiView invalid(missing,services);}catch(const std::exception&){startupFailed=true;}
-        assert(startupFailed);std::ifstream unchanged(bad);std::string content;unchanged>>content;assert(content=="bad");
+        assert(startupFailed);std::ifstream unchanged(bad);std::string content;unchanged>>content;assert(content=="bad");unchanged.close();
         // Player exit saves changed data without prompting; Magic still prompts.
         int prompts=0,saveErrors=0;
         GuiServices closing=services;
@@ -134,9 +138,9 @@ check(oldCard.id==='card1');fail(()=>goCardIndex(-1));fail(()=>goCardIndex(1.5))
         assert(closingPlayer.HasUnsavedChanges()&&closingPlayer.CanClose());
         assert(saved.Load(second)&&saved.name=="Exit Saved"&&!closingPlayer.HasUnsavedChanges()&&prompts==0);
         closingPlayer.MutableDeckData().name="Keep On Failure";closingPlayer.NotifyScriptMutation();
-        auto failedSave=second;failedSave+=".tmp";{std::ofstream f(failedSave);f<<"blocked";}
+        auto failedSave=second;failedSave+=".backup";std::filesystem::rename(second,failedSave);std::filesystem::create_directory(second);
         assert(!closingPlayer.CanClose()&&saveErrors==1&&closingPlayer.HasUnsavedChanges());
-        assert(saved.Load(second)&&saved.name=="Exit Saved");std::filesystem::remove(failedSave);
+        assert(saved.Load(failedSave)&&saved.name=="Exit Saved");std::filesystem::remove(second);std::filesystem::rename(failedSave,second);
         closingPlayer.SetMagic(true);assert(!closingPlayer.CanClose()&&prompts==1);
         closingPlayer.SetMagic(false);assert(closingPlayer.CanClose()&&prompts==1);
         assert(saved.Load(second)&&saved.name=="Keep On Failure");
@@ -149,6 +153,26 @@ check(oldCard.id==='card1');fail(()=>goCardIndex(-1));fail(()=>goCardIndex(1.5))
         newJs.RunScoped(newButton->script,"home-new.js","mouseUp");
         assert(newFromHome.HasPendingDeckChange());assert(newFromHome.ApplyPendingDeckChange());
         assert(newFromHome.IsMagic()&&newFromHome.DeckPath().empty()&&newFromHome.HasUnsavedChanges());
+        // Embedded Home exposes new Folder creation and enters Magic after the event.
+        const auto* newFolderButton=embedded.cards.front().FindObject("newFolder");assert(newFolderButton);
+        GuiView folderFromHome(closeOptions,services);
+        const auto createdFolder=root/PathFromUtf8("新規 Folder");
+        ScriptHost folderHost;folderHost.workingDirectory=root;
+        bool cancelled=true;
+        folderHost.newFolderDeck=[&](const auto& path){if(cancelled)return false;return folderFromHome.RequestNewFolderDeck(path.empty()?createdFolder:path);};
+        ScriptEngine folderJs([](const std::string&){},folderHost);
+        folderJs.RunScoped(newFolderButton->script,"home-new-folder.js","mouseUp");
+        assert(!folderFromHome.HasPendingDeckChange()&&!std::filesystem::exists(createdFolder));
+        cancelled=false;
+        folderJs.RunScoped(newFolderButton->script,"home-new-folder.js","mouseUp");
+        assert(folderFromHome.HasPendingDeckChange()&&!std::filesystem::exists(createdFolder));
+        assert(folderFromHome.ApplyPendingDeckChange());
+        assert(folderFromHome.IsMagic()&&folderFromHome.DeckData().folderMode&&!folderFromHome.ScriptsEnabled());
+        assert(folderFromHome.DeckPath()==createdFolder/"main.deck"&&!folderFromHome.HasUnsavedChanges());
+        assert(std::filesystem::exists(createdFolder/"script/deck.js"));
+        folderJs.RunGlobal("let rejected=0;for(const f of [()=>app.newFolderDeck(''),()=>app.newFolderDeck(null),()=>app.newFolderDeck(3)]){try{f();}catch(e){rejected++;}}if(rejected!==3)throw new Error('Folder arguments');","folder-arguments.js");
+        bool folderFailed=false;try{folderFromHome.RequestNewFolderDeck(createdFolder);}catch(const std::exception&){folderFailed=true;}
+        assert(folderFailed&&!folderFromHome.HasPendingDeckChange());
 #ifndef _WIN32
         // No Deck argument resolves to AppData home, without a file dialog.
         const char* previous=std::getenv("XDG_DATA_HOME");const std::optional<std::string> backup=previous?std::optional<std::string>(previous):std::nullopt;
@@ -160,5 +184,5 @@ check(oldCard.id==='card1');fail(()=>goCardIndex(-1));fail(()=>goCardIndex(1.5))
 #endif
         std::filesystem::remove_all(root);
         std::cout<<"PASS: card navigation, validation, home creation/preservation, deferred deck switch, save/discard, same-path reload, stale references and failure rollback\n";
-    } catch(...) {std::filesystem::remove_all(root);throw;}
+    } catch(const std::exception& error) {std::filesystem::remove_all(root);std::cerr<<error.what()<<std::endl;return 1;}
 }

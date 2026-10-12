@@ -1,0 +1,770 @@
+[
+  {
+    "name": "app.getArgs",
+    "signature": "app.getArgs()",
+    "description": "実行ファイル、Deckパス、起動オプションを除いた文字列配列。呼ぶたびにコピーを返す",
+    "file": "APP_API.md"
+  },
+  {
+    "name": "JSON.parse",
+    "signature": "JSON.parse(text)",
+    "description": "JavaScript標準のJSON解析",
+    "file": "APP_API.md"
+  },
+  {
+    "name": "JSON.stringify",
+    "signature": "JSON.stringify(value, null, indent)",
+    "description": "JavaScript標準のJSON生成",
+    "file": "APP_API.md"
+  },
+  {
+    "name": "alert",
+    "signature": "alert(object)",
+    "description": "文字列化してOKダイアログ表示。循環参照にも対応",
+    "file": "APP_API.md"
+  },
+  {
+    "name": "app.runCode",
+    "signature": "app.runCode(code)",
+    "description": "文字列を同期実行し、最後の式の値を返す。結果なしはundefined",
+    "file": "APP_API.md"
+  },
+  {
+    "name": "app.write",
+    "signature": "app.write(text)",
+    "description": "UTF-8文字列を標準出力へ。改行・BOMなし",
+    "file": "APP_API.md"
+  },
+  {
+    "name": "app.writeLine",
+    "signature": "app.writeLine(text = \"\")",
+    "description": "UTF-8文字列とLFを標準出力へ",
+    "file": "APP_API.md"
+  },
+  {
+    "name": "app.writeError",
+    "signature": "app.writeError(text = \"\")",
+    "description": "UTF-8文字列とLFを標準エラーへ",
+    "file": "APP_API.md"
+  },
+  {
+    "name": "app.readBytes",
+    "signature": "app.readBytes(count)",
+    "description": "標準入力から最大countバイトをUint8Arrayで取得。EOF時は短くなる",
+    "file": "APP_API.md"
+  },
+  {
+    "name": "app.writeBytes",
+    "signature": "app.writeBytes(bytes, offset = 0, count = bytes.length - offset)",
+    "description": "Uint8Arrayの指定範囲を標準出力へ",
+    "file": "APP_API.md"
+  },
+  {
+    "name": "app.readBinary",
+    "signature": "app.readBinary()",
+    "description": "標準入力をEOFまでまとめて読み、Uint8Arrayで返す",
+    "file": "APP_API.md"
+  },
+  {
+    "name": "app.writeBinary",
+    "signature": "app.writeBinary(bytes)",
+    "description": "Uint8ArrayまたはArrayBuffer全体を標準出力へ",
+    "file": "APP_API.md"
+  },
+  {
+    "name": "app.flush",
+    "signature": "app.flush()",
+    "description": "標準出力をフラッシュ",
+    "file": "APP_API.md"
+  },
+  {
+    "name": "app.setConsoleMode",
+    "signature": "app.setConsoleMode(enabled)",
+    "description": "コンソールへの接続／切り離し。再接続可能",
+    "file": "APP_API.md"
+  },
+  {
+    "name": "app.setMagic",
+    "signature": "app.setMagic(enabled)",
+    "description": "trueでMagic、falseでPlayer。deckxからMagicへの移行は例外",
+    "file": "APP_API.md"
+  },
+  {
+    "name": "app.exit",
+    "signature": "app.exit(code = 0)",
+    "description": "現在のスクリプトを打ち切り、終了コードを指定して終了要求",
+    "file": "APP_API.md"
+  },
+  {
+    "name": "app.beep",
+    "signature": "app.beep(frequency = 800, durationMs = 200)",
+    "description": "Beep音。37～32767Hz、0～60000ms。完了まで待機",
+    "file": "APP_API.md"
+  },
+  {
+    "name": "app.playWav",
+    "signature": "app.playWav(path, wait = false)",
+    "description": "WAVを再生。既定は非同期、trueなら完了まで待機",
+    "file": "APP_API.md"
+  },
+  {
+    "name": "app.stopWav",
+    "signature": "app.stopWav()",
+    "description": "再生中のWAVを停止",
+    "file": "APP_API.md"
+  },
+  {
+    "name": "app.getHomePath",
+    "signature": "app.getHomePath()",
+    "description": "Homeとして使用する `home.deck` のフルパス。",
+    "file": "APP_API.md"
+  },
+  {
+    "name": "home.deck",
+    "signature": "home.deck",
+    "description": "Homeとして使用する `home.deck` のフルパス。",
+    "file": "APP_API.md"
+  },
+  {
+    "name": "app.getDeckPath",
+    "signature": "app.getDeckPath()",
+    "description": "通常はDeckのフルパス、Folderはmain.deck、deckxは元のZIPファイルのフルパス。未保存なら空文字列。",
+    "file": "APP_API.md"
+  },
+  {
+    "name": "app.getExePath",
+    "signature": "app.getExePath()",
+    "description": "実行中の `ScriptDeck.exe` のフルパス。",
+    "file": "APP_API.md"
+  },
+  {
+    "name": "ScriptDeck.exe",
+    "signature": "ScriptDeck.exe",
+    "description": "実行中の `ScriptDeck.exe` のフルパス。",
+    "file": "APP_API.md"
+  },
+  {
+    "name": "app.getDocumentPath",
+    "signature": "app.getDocumentPath()",
+    "description": "WindowsのDocumentsの設定先。OneDriveなどへの移動にも対応。",
+    "file": "APP_API.md"
+  },
+  {
+    "name": "app.getDocumentsPath",
+    "signature": "app.getDocumentsPath()",
+    "description": "`app.getDocumentPath()` の別名。",
+    "file": "APP_API.md"
+  },
+  {
+    "name": "app.getTempPath",
+    "signature": "app.getTempPath()",
+    "description": "現在のプロセスが使用する一時フォルダ。",
+    "file": "APP_API.md"
+  },
+  {
+    "name": "app.getAppDataPath",
+    "signature": "app.getAppDataPath()",
+    "description": "ScriptDeck用の設定フォルダ。通常は `C:\\Users\\ユーザー名\\AppData\\Local\\ScriptDeck`。",
+    "file": "APP_API.md"
+  },
+  {
+    "name": "app.readClipboard",
+    "signature": "app.readClipboard()",
+    "description": "クリップボードのテキストを文字列で取得。テキストがなければ空文字列。",
+    "file": "APP_API.md"
+  },
+  {
+    "name": "app.writeClipboard",
+    "signature": "app.writeClipboard(text)",
+    "description": "テキストを設定。引数は文字列。戻り値はundefined。空文字列で空のテキストを設定。",
+    "file": "APP_API.md"
+  },
+  {
+    "name": "app.launchProcess",
+    "signature": "app.launchProcess(executable, args = [])",
+    "description": "起動後、終了を待たず戻る。戻り値はundefined。起動失敗は例外。",
+    "file": "APP_API.md"
+  },
+  {
+    "name": "app.runProcess",
+    "signature": "app.runProcess(executable, args = [])",
+    "description": "起動して終了まで待ち、標準出力を文字列で返す。起動失敗は例外。",
+    "file": "APP_API.md"
+  },
+  {
+    "name": "fs.readText",
+    "signature": "fs.readText(path)",
+    "description": "UTF-8のBOM有り／無しを自動判定し、先頭BOMを除いて返す",
+    "file": "FILE_API.md"
+  },
+  {
+    "name": "fs.writeText",
+    "signature": "fs.writeText(path, text, withBOM = false)",
+    "description": "UTF-8で作成／上書き。trueはBOM有り",
+    "file": "FILE_API.md"
+  },
+  {
+    "name": "fs.appendText",
+    "signature": "fs.appendText(path, text, withBOM = false)",
+    "description": "追記。BOM指定は新規・空ファイルの場合だけ適用",
+    "file": "FILE_API.md"
+  },
+  {
+    "name": "fs.readBytes",
+    "signature": "fs.readBytes(path)",
+    "description": "ファイル全体をUint8Arrayとして取得",
+    "file": "FILE_API.md"
+  },
+  {
+    "name": "fs.writeBytes",
+    "signature": "fs.writeBytes(path, bytes)",
+    "description": "Uint8Arrayを作成／上書き",
+    "file": "FILE_API.md"
+  },
+  {
+    "name": "fs.exists",
+    "signature": "fs.exists(path)",
+    "description": "ファイル・フォルダいずれかが存在するか",
+    "file": "FILE_API.md"
+  },
+  {
+    "name": "fs.existsFile",
+    "signature": "fs.existsFile(path)",
+    "description": "ファイルが存在するか",
+    "file": "FILE_API.md"
+  },
+  {
+    "name": "fs.existsDir",
+    "signature": "fs.existsDir(path)",
+    "description": "フォルダが存在するか",
+    "file": "FILE_API.md"
+  },
+  {
+    "name": "fs.resolvePath",
+    "signature": "fs.resolvePath(path)",
+    "description": "絶対パスへ変換",
+    "file": "FILE_API.md"
+  },
+  {
+    "name": "fs.getFiles",
+    "signature": "fs.getFiles(path)",
+    "description": "直下のファイルの絶対パス配列。再帰なし・名前順",
+    "file": "FILE_API.md"
+  },
+  {
+    "name": "fs.getDirectories",
+    "signature": "fs.getDirectories(path)",
+    "description": "直下のフォルダの絶対パス配列。再帰なし・名前順",
+    "file": "FILE_API.md"
+  },
+  {
+    "name": "fs.move",
+    "signature": "fs.move(source, destination)",
+    "description": "移動先フルパスを指定してファイル／フォルダを移動。別ドライブにも対応",
+    "file": "FILE_API.md"
+  },
+  {
+    "name": "fs.rename",
+    "signature": "fs.rename(path, newName)",
+    "description": "同じ親フォルダ内で名前だけ変更",
+    "file": "FILE_API.md"
+  },
+  {
+    "name": "fs.delete",
+    "signature": "fs.delete(path, recursive = false)",
+    "description": "ファイル／空フォルダを削除。trueならフォルダの中身も削除",
+    "file": "FILE_API.md"
+  },
+  {
+    "name": "getName",
+    "signature": "getName(path)",
+    "description": "`AAA_001.tga`",
+    "file": "FILE_API.md"
+  },
+  {
+    "name": "AAA_001.tga",
+    "signature": "AAA_001.tga",
+    "description": "`AAA_001.tga`",
+    "file": "FILE_API.md"
+  },
+  {
+    "name": "getNameWithoutExt",
+    "signature": "getNameWithoutExt(path)",
+    "description": "`AAA_001`",
+    "file": "FILE_API.md"
+  },
+  {
+    "name": "AAA_001",
+    "signature": "AAA_001",
+    "description": "`AAA_001`",
+    "file": "FILE_API.md"
+  },
+  {
+    "name": "getExt",
+    "signature": "getExt(path)",
+    "description": "`.tga`",
+    "file": "FILE_API.md"
+  },
+  {
+    "name": "getParent",
+    "signature": "getParent(path)",
+    "description": "`C:\\AAA`",
+    "file": "FILE_API.md"
+  },
+  {
+    "name": "getFrame",
+    "signature": "getFrame(path)",
+    "description": "`001`",
+    "file": "FILE_API.md"
+  },
+  {
+    "name": "getNameWithoutFrame",
+    "signature": "getNameWithoutFrame(path)",
+    "description": "`AAA_`",
+    "file": "FILE_API.md"
+  },
+  {
+    "name": "AAA_",
+    "signature": "AAA_",
+    "description": "`AAA_`",
+    "file": "FILE_API.md"
+  },
+  {
+    "name": "fs.getFileSize",
+    "signature": "fs.getFileSize(path)",
+    "description": "ファイルサイズ（バイト数、number）。フォルダ指定は例外。",
+    "file": "FILE_API.md"
+  },
+  {
+    "name": "fs.getFileTimes",
+    "signature": "fs.getFileTimes(path)",
+    "description": "`{ createdTime, modifiedTime, accessedTime }`。",
+    "file": "FILE_API.md"
+  },
+  {
+    "name": "fs.getFileTimestamp",
+    "signature": "fs.getFileTimestamp(path)",
+    "description": "更新日時だけを取得。getFileTimes(path).modifiedTimeと同じ。",
+    "file": "FILE_API.md"
+  },
+  {
+    "name": "fs.getFileInfo",
+    "signature": "fs.getFileInfo(path)",
+    "description": "`{ path, size, isDirectory, createdTime, modifiedTime, accessedTime }`。pathはフルパス、フォルダのsizeはnull。",
+    "file": "FILE_API.md"
+  },
+  {
+    "name": "app.currentCard",
+    "signature": "app.currentCard",
+    "description": "現在のカード。読み取り専用",
+    "file": "OBJECT_API.md"
+  },
+  {
+    "name": "app.deck",
+    "signature": "app.deck",
+    "description": "Deckへの参照。読み取り専用",
+    "file": "OBJECT_API.md"
+  },
+  {
+    "name": "app.deck.cardById",
+    "signature": "app.deck.cardById(id)",
+    "description": "カード検索",
+    "file": "OBJECT_API.md"
+  },
+  {
+    "name": "cardByName",
+    "signature": "cardByName(name)",
+    "description": "カード検索",
+    "file": "OBJECT_API.md"
+  },
+  {
+    "name": "card.objectById",
+    "signature": "card.objectById(id)",
+    "description": "そのカード内のオブジェクト検索",
+    "file": "OBJECT_API.md"
+  },
+  {
+    "name": "objectByName",
+    "signature": "objectByName(name)",
+    "description": "そのカード内のオブジェクト検索",
+    "file": "OBJECT_API.md"
+  },
+  {
+    "name": "object.card",
+    "signature": "object.card",
+    "description": "所属カード。カード移動後も所属先を保持",
+    "file": "OBJECT_API.md"
+  },
+  {
+    "name": "this",
+    "signature": "this",
+    "description": "mouseUpではボタン、openCardではカード",
+    "file": "OBJECT_API.md"
+  },
+  {
+    "name": "event.target",
+    "signature": "event.target",
+    "description": "mouseUpではボタン、openCardではカード",
+    "file": "OBJECT_API.md"
+  },
+  {
+    "name": "id",
+    "signature": "id",
+    "description": "string、読み取り専用。typeはbutton / field / text / image / listbox / dropdownlist / inputbox / checkbox / radiobutton",
+    "file": "OBJECT_API.md"
+  },
+  {
+    "name": "type",
+    "signature": "type",
+    "description": "string、読み取り専用。typeはbutton / field / text / image / listbox / dropdownlist / inputbox / checkbox / radiobutton",
+    "file": "OBJECT_API.md"
+  },
+  {
+    "name": "name",
+    "signature": "name",
+    "description": "string、読み書き",
+    "file": "OBJECT_API.md"
+  },
+  {
+    "name": "text",
+    "signature": "text",
+    "description": "string、読み書き",
+    "file": "OBJECT_API.md"
+  },
+  {
+    "name": "script",
+    "signature": "script",
+    "description": "string、読み書き",
+    "file": "OBJECT_API.md"
+  },
+  {
+    "name": "x",
+    "signature": "x",
+    "description": "有限のnumber、読み書き",
+    "file": "OBJECT_API.md"
+  },
+  {
+    "name": "y",
+    "signature": "y",
+    "description": "有限のnumber、読み書き",
+    "file": "OBJECT_API.md"
+  },
+  {
+    "name": "width",
+    "signature": "width",
+    "description": "number、1～8192、読み書き",
+    "file": "OBJECT_API.md"
+  },
+  {
+    "name": "height",
+    "signature": "height",
+    "description": "number、1～8192、読み書き",
+    "file": "OBJECT_API.md"
+  },
+  {
+    "name": "visible",
+    "signature": "visible",
+    "description": "boolean、読み書き",
+    "file": "OBJECT_API.md"
+  },
+  {
+    "name": "enabled",
+    "signature": "enabled",
+    "description": "boolean、読み書き",
+    "file": "OBJECT_API.md"
+  },
+  {
+    "name": "imageSource",
+    "signature": "imageSource",
+    "description": "`\"file\"` または `\"resource\"`、読み書き",
+    "file": "OBJECT_API.md"
+  },
+  {
+    "name": "imagePath",
+    "signature": "imagePath",
+    "description": "string、読み書き",
+    "file": "OBJECT_API.md"
+  },
+  {
+    "name": "resourceId",
+    "signature": "resourceId",
+    "description": "string、読み書き",
+    "file": "OBJECT_API.md"
+  },
+  {
+    "name": "backgroundColor",
+    "signature": "backgroundColor",
+    "description": "`[r,g,b,a]`、各値0～1、読み書き。`null`で既定色に戻す",
+    "file": "OBJECT_API.md"
+  },
+  {
+    "name": "textColor",
+    "signature": "textColor",
+    "description": "`[r,g,b,a]`、各値0～1、読み書き。`null`で既定色に戻す",
+    "file": "OBJECT_API.md"
+  },
+  {
+    "name": "borderColor",
+    "signature": "borderColor",
+    "description": "`[r,g,b,a]`、各値0～1、読み書き。`null`で既定色に戻す",
+    "file": "OBJECT_API.md"
+  },
+  {
+    "name": "tintColor",
+    "signature": "tintColor",
+    "description": "`[r,g,b,a]`、各値0～1、読み書き。`null`で既定色に戻す",
+    "file": "OBJECT_API.md"
+  },
+  {
+    "name": "items",
+    "signature": "items",
+    "description": "string配列、読み書き",
+    "file": "OBJECT_API.md"
+  },
+  {
+    "name": "itemCount",
+    "signature": "itemCount",
+    "description": "項目数、読み取り専用",
+    "file": "OBJECT_API.md"
+  },
+  {
+    "name": "selectedIndex",
+    "signature": "selectedIndex",
+    "description": "選択番号。0始まり、`-1`で未選択。読み書き",
+    "file": "OBJECT_API.md"
+  },
+  {
+    "name": "selectedText",
+    "signature": "selectedText",
+    "description": "選択項目の文字列、未選択は空文字。代入は最初の一致項目を選択、存在しない値は例外",
+    "file": "OBJECT_API.md"
+  },
+  {
+    "name": "getItem",
+    "signature": "getItem(index)",
+    "description": "項目文字列を取得",
+    "file": "OBJECT_API.md"
+  },
+  {
+    "name": "setItem",
+    "signature": "setItem(index, text)",
+    "description": "項目変更。選択中ならselectedTextも更新",
+    "file": "OBJECT_API.md"
+  },
+  {
+    "name": "addItem",
+    "signature": "addItem(text)",
+    "description": "末尾へ追加し、新しい0始まりの番号を返す",
+    "file": "OBJECT_API.md"
+  },
+  {
+    "name": "insertItem",
+    "signature": "insertItem(index, text)",
+    "description": "指定位置へ追加し、番号を返す。末尾への挿入も可能",
+    "file": "OBJECT_API.md"
+  },
+  {
+    "name": "removeItem",
+    "signature": "removeItem(index)",
+    "description": "項目削除。選択中の項目を削除すると未選択になる",
+    "file": "OBJECT_API.md"
+  },
+  {
+    "name": "clearItems",
+    "signature": "clearItems()",
+    "description": "全項目削除し未選択にする",
+    "file": "OBJECT_API.md"
+  },
+  {
+    "name": "card.createObject",
+    "signature": "card.createObject(type, properties = {})",
+    "description": "作成してオブジェクト参照を返す",
+    "file": "OBJECT_API.md"
+  },
+  {
+    "name": "card.objects",
+    "signature": "card.objects",
+    "description": "現在の全オブジェクト参照の配列。配列はコピー",
+    "file": "OBJECT_API.md"
+  },
+  {
+    "name": "card.objectAt",
+    "signature": "card.objectAt(index)",
+    "description": "0始まりの順番で取得。範囲外は例外",
+    "file": "OBJECT_API.md"
+  },
+  {
+    "name": "card.removeObject",
+    "signature": "card.removeObject(objectOrId)",
+    "description": "所属オブジェクトまたはIDを指定して削除。削除成功はtrue、存在しないIDはfalse",
+    "file": "OBJECT_API.md"
+  },
+  {
+    "name": "object.remove",
+    "signature": "object.remove()",
+    "description": "自分を削除。成功はtrue、削除済みはfalse",
+    "file": "OBJECT_API.md"
+  },
+  {
+    "name": "object.exists",
+    "signature": "object.exists",
+    "description": "存在すればtrue、削除済みならfalse。読み取り専用",
+    "file": "OBJECT_API.md"
+  },
+  {
+    "name": "object.clone",
+    "signature": "object.clone(properties = {})",
+    "description": "同じカードに複製。新しい参照を返し、指定プロパティで上書き",
+    "file": "OBJECT_API.md"
+  },
+  {
+    "name": "object.index",
+    "signature": "object.index",
+    "description": "現在の0始まりの並び順。読み取り専用",
+    "file": "OBJECT_API.md"
+  },
+  {
+    "name": "object.moveToIndex",
+    "signature": "object.moveToIndex(index)",
+    "description": "指定順へ移動。範囲外は例外",
+    "file": "OBJECT_API.md"
+  },
+  {
+    "name": "object.bringToFront",
+    "signature": "object.bringToFront()",
+    "description": "配列末尾へ移動し、最後に描画",
+    "file": "OBJECT_API.md"
+  },
+  {
+    "name": "object.sendToBack",
+    "signature": "object.sendToBack()",
+    "description": "配列先頭へ移動し、最初に描画",
+    "file": "OBJECT_API.md"
+  },
+  {
+    "name": "nextCard",
+    "signature": "nextCard()",
+    "description": "次のカード",
+    "file": "NAVIGATION_API.md"
+  },
+  {
+    "name": "prevCard",
+    "signature": "prevCard()",
+    "description": "前のカード",
+    "file": "NAVIGATION_API.md"
+  },
+  {
+    "name": "topCard",
+    "signature": "topCard()",
+    "description": "先頭のカード",
+    "file": "NAVIGATION_API.md"
+  },
+  {
+    "name": "endCard",
+    "signature": "endCard()",
+    "description": "最後のカード",
+    "file": "NAVIGATION_API.md"
+  },
+  {
+    "name": "goCardIndex",
+    "signature": "goCardIndex(index)",
+    "description": "0始まりのカード番号で移動",
+    "file": "NAVIGATION_API.md"
+  },
+  {
+    "name": "goCard",
+    "signature": "goCard(nameOrId)",
+    "description": "カードIDまたは名前で移動",
+    "file": "NAVIGATION_API.md"
+  },
+  {
+    "name": "openDeck",
+    "signature": "openDeck(path)",
+    "description": "指定Deckを開く。省略時は現在のDeckをディスクから読み直す。未保存の変更は確認せず破棄。戻り値はundefined。",
+    "file": "NAVIGATION_API.md"
+  },
+  {
+    "name": "app.openDeck",
+    "signature": "app.openDeck(path)",
+    "description": "指定Deckを開く。省略時は現在のDeckをディスクから読み直す。未保存の変更は確認せず破棄。戻り値はundefined。",
+    "file": "NAVIGATION_API.md"
+  },
+  {
+    "name": "saveDeck",
+    "signature": "saveDeck(path)",
+    "description": "指定パスに現在のDeckを保存。省略時は現在のパスへ上書き。指定パスへの保存成功後はそのパスを現在のDeckパスにする。戻り値はundefined。",
+    "file": "NAVIGATION_API.md"
+  },
+  {
+    "name": "app.saveDeck",
+    "signature": "app.saveDeck(path)",
+    "description": "指定パスに現在のDeckを保存。省略時は現在のパスへ上書き。指定パスへの保存成功後はそのパスを現在のDeckパスにする。戻り値はundefined。",
+    "file": "NAVIGATION_API.md"
+  },
+  {
+    "name": "saveAsDeck",
+    "signature": "saveAsDeck()",
+    "description": "Deck用の保存ダイアログを表示して保存。成功でtrue、キャンセルでfalse。成功後は選択したパスを現在のDeckパスにする。",
+    "file": "NAVIGATION_API.md"
+  },
+  {
+    "name": "app.saveAsDeck",
+    "signature": "app.saveAsDeck()",
+    "description": "Deck用の保存ダイアログを表示して保存。成功でtrue、キャンセルでfalse。成功後は選択したパスを現在のDeckパスにする。",
+    "file": "NAVIGATION_API.md"
+  },
+  {
+    "name": "openCard",
+    "signature": "openCard(event)",
+    "description": "起動時のカード表示、別カードへの移動後。",
+    "file": "SCRIPT_API.md"
+  },
+  {
+    "name": "mouseUp",
+    "signature": "mouseUp(event)",
+    "description": "ボタンの操作、カードのEnter／Escape対象ボタン操作。",
+    "file": "SCRIPT_API.md"
+  },
+  {
+    "name": "change",
+    "signature": "change(event)",
+    "description": "ユーザーによるチェック・選択状態の変更。",
+    "file": "SCRIPT_API.md"
+  },
+  {
+    "name": "dropFiles",
+    "signature": "dropFiles(event)",
+    "description": "表示中のカードへのファイル・フォルダのドロップ。",
+    "file": "SCRIPT_API.md"
+  },
+  {
+    "name": "event.type",
+    "signature": "event.type",
+    "description": "`\"change\"`。",
+    "file": "SCRIPT_API.md"
+  },
+  {
+    "name": "event.selectedIndex",
+    "signature": "event.selectedIndex",
+    "description": "操作後の選択番号（0始まり）。",
+    "file": "SCRIPT_API.md"
+  },
+  {
+    "name": "event.selectedText",
+    "signature": "event.selectedText",
+    "description": "操作後の選択文字列。",
+    "file": "SCRIPT_API.md"
+  },
+  {
+    "name": "event.previousSelectedIndex",
+    "signature": "event.previousSelectedIndex",
+    "description": "操作前の選択番号。未選択は-1。",
+    "file": "SCRIPT_API.md"
+  },
+  {
+    "name": "event.previousSelectedText",
+    "signature": "event.previousSelectedText",
+    "description": "操作前の選択文字列。未選択は空文字列。",
+    "file": "SCRIPT_API.md"
+  }
+]

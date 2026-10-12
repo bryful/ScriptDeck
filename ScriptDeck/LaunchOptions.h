@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include <string>
 #include <filesystem>
 #include <vector>
@@ -11,6 +11,7 @@ struct LaunchOptions
     std::string command;
     std::string input;
     std::vector<std::string> scriptArgs;
+    bool folderMode = false;
     bool showHelp = false;
     std::string error;
 };

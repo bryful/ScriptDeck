@@ -1,8 +1,9 @@
-﻿#include "ResourceIds.h"
+#include "ResourceIds.h"
 #include <winver.h>
-// Keep application icon first, Deck icon second (DefaultIcon indices 0 and 1).
+// Application, Deck, deckx icons (DefaultIcon indices 0, 1, 2).
 IDI_SCRIPTDECK_APP ICON "assets/scriptdeck.ico"
 IDI_SCRIPTDECK_DECK ICON "assets/deck.ico"
+IDI_SCRIPTDECK_DECKX ICON "assets/deckx.ico"
 IDR_SCRIPTDECK_LOGO RCDATA "assets/logo.png"
 IDR_SCRIPTDECK_HOME RCDATA "assets/home.deck"
 

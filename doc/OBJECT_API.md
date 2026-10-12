@@ -1,8 +1,8 @@
 # カード・オブジェクトAPI
 
-更新日：2026-10-08
+更新日：2026-10-12
 
-PlayerとMagicの実行プレビューで利用できます。読み取りは現在のデータを返し、代入は画面へ反映されます。Magicの変更は未保存としてタイトルに `*` を付け、通常の保存対象になります。Playerの変更は未保存として記録し、終了時に現在のDeckへ自動保存します。
+Playerと通常DeckのMagic実行プレビューで利用できます。読み取りは現在のデータを返し、代入は画面へ反映されます。Magicの変更は未保存としてタイトルに `*` を付け、通常の保存対象になります。Playerの変更は未保存として記録し、終了時に現在のDeckへ自動保存します。
 
 ```javascript
 function mouseUp(event) {
@@ -12,6 +12,14 @@ function mouseUp(event) {
     this.enabled = false;
 }
 ```
+
+## Folderの制約
+
+FolderのPlayerではDeck・カード・部品の`name`／`script`への代入を拒否します。
+名前はMagicで変更し、コードはScriptDeckを終了してVSCodeで編集してください。
+動的作成時の`script`指定も拒否し、既定名の外部JSを作成またはリンクします。
+通常Deckの内蔵コードを指定する以下の例は、Folderへそのまま適用できません。
+詳細は[Deck形式・Export](FILE_FORMATS.md)を参照してください。
 
 ## 検索と参照
 
@@ -85,7 +93,7 @@ CardとDeckのwidth/heightは同じDeck全体のカードサイズです。整�
 
 `app.deck.currentCardId = "card2"`で移動し、次のイベント処理で移動先のopenCardを呼びます。参照を保持したオブジェクトの所属先は変わりません。startupPlacementはdefault / previous_default / previous_center / centerです。
 
-scriptへの代入は保存データを変更します。実行中のハンドラは継続し、オブジェクト・カードスクリプトの変更は次回の呼び出しから適用します。Deckスクリプトはランタイム生成時だけ実行するため、変更後の再実行にはDeckを開き直すか実行プレビューを入り直してください。
+通常Deckと、内蔵コードを持つdeckxでは、scriptへの代入は保存データを変更します。実行中のハンドラは継続し、オブジェクト・カードスクリプトの変更は次回の呼び出しから適用します。Deckスクリプトはランタイム生成時だけ実行するため、変更後の再実行にはDeckを開き直すか実行プレビューを入り直してください。
 
 ## 動的作成・削除・複製
 
@@ -164,7 +172,9 @@ checkedはbooleanで既定値false。RadioButtonのgroupはstringで既定値空
 
 ## 編集画面とイベント
 
-Magicでは部品・カード・Deckのスクリプト編集ボタンから作業領域全体のコードエディタを開きます。変更は対象のscriptに反映されます。編集操作と雛形は [USER_GUIDE.md](USER_GUIDE.md)、状態・選択変更を受け取るchangeイベントは [SCRIPT_API.md](SCRIPT_API.md) を参照してください。
+通常DeckのMagicでは部品・カード・Deckのスクリプト編集ボタンから作業領域全体のコードエディタを開きます。変更は対象のscriptに反映されます。編集操作と雛形は [USER_GUIDE.md](USER_GUIDE.md)、状態・選択変更を受け取るchangeイベントは [SCRIPT_API.md](SCRIPT_API.md) を参照してください。
 
 
 新規部品には型に応じたイベント雛形を設定します。createObjectの初期プロパティでscriptを指定した場合は指定コードを使用します。cloneは元のコードを保持します。雛形の一覧は [USER_GUIDE.md](USER_GUIDE.md) を参照してください。
+
+形式ごとの保存・相対パスの一覧は[Deck形式・Export](FILE_FORMATS.md)を参照してください。

@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include <string>
 #include <vector>
 #include <array>
@@ -30,6 +30,7 @@ struct CardObject
     std::optional<DeckColor> borderColor;
     std::optional<DeckColor> tintColor;
     std::string script;
+    std::string scriptFile;
 };
 std::string ObjectTypeName(ObjectType type);
 ObjectType ParseObjectType(const std::string& name);

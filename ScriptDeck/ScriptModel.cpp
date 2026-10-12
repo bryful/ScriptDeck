@@ -145,6 +145,12 @@ json ScriptModel::Access(const std::string& operation,const std::string& kind,co
             if(item.key()!="id"&&item.key()!="items"&&item.key()!="selectedIndex")
                 validator.Access("set","object",card->id,newId,item.key(),item.value());
         if(value.contains("selectedIndex"))validator.Access("set","object",card->id,newId,"selectedIndex",value.at("selectedIndex"));
+        if(deck.folderMode) {
+            if(value.contains("script"))throw std::runtime_error("Edit Folder scripts in VSCode.");
+            auto& created=deck.AddObject(card->id,candidate.type,candidate.name);
+            candidate.scriptFile=created.scriptFile;candidate.script=created.script;
+            card->objects.pop_back();
+        }
         used.insert(newId);card->objects.push_back(std::move(candidate));
         if(card->objects.back().type==ObjectType::RadioButton)card->SetChecked(newId,card->objects.back().checked);
         changed_();return newId;
@@ -211,6 +217,8 @@ json ScriptModel::Access(const std::string& operation,const std::string& kind,co
         return result;
     }
     if(operation!="set")throw std::invalid_argument("Unknown model operation.");
+    if(deck.folderMode && property=="script")throw std::runtime_error("Edit Folder scripts in VSCode.");
+    if(deck.folderMode && property=="name")throw std::runtime_error("Rename Folder objects in Magic Folder.");
     if(kind=="deck"){
         const json before=Access("get",kind,cardId,objectId,property);
         if(property=="name")deck.name=String(value);else if(property=="script")deck.script=String(value);

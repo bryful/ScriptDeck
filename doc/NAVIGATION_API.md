@@ -1,12 +1,12 @@
 # カードとDeckの移動
 
-更新日：2026-10-08
+更新日：2026-10-12
 
-PlayerとMagicの実行プレビューで利用できます。グローバル関数と `app` のメソッドは同じ動作です。
+Playerと通常DeckのMagic実行プレビューで利用できます。グローバル関数と `app` のメソッドは同じ動作です。
 
 ## 起動時のHome
 
-Deckを指定せずに起動すると、Player／Magicともに `%LOCALAPPDATA%\ScriptDeck\home.deck` を開きます。
+Deckを指定せずに起動すると、Player／通常DeckのMagicともに `%LOCALAPPDATA%\ScriptDeck\home.deck` を開きます。
 
 ファイルがなければ、実行ファイル内のRCDATAリソース `assets/home.deck` から初期Homeを保存して開きます。初期Homeには「Open Deck」と「新規Deck」のボタンがあります。新規Deckは未保存のDeckを作成してMagicへ切り替えます。Homeを編集・保存した後は、その内容を使います。存在するHomeが壊れている場合はエラーを表示し、自動上書きしません。
 
@@ -48,7 +48,7 @@ app.changeDeck("other.deck", false);
 
 `goHome(isSave=true)` は共通のHomeを開きます。Homeを削除していた場合は初期Homeを再作成します。
 
-`changeDeck(path, isSave=true)` は指定されたDeckを開きます。相対パスの基準は既存の `fs` APIと同じ起動時のカレントディレクトリです。
+`changeDeck(path, isSave=true)` は指定されたDeckを開きます。相対パスの基準は`fs`と同じで、通常・Folderは起動時のカレントフォルダ、deckxは展開先です。
 
 `isSave` はこの呼び出しにおける移動前のDeckの自動保存指定です。`true` はPlayerでのスクリプトによる変更も含めて保存します。`false` は保存せずに切り替えます。現在のDeckに保存先がない場合（Magicの新規Deck）は、先に保存するか `false` を指定してください。自動保存では保存先選択ダイアログを表示しません。
 
@@ -83,7 +83,7 @@ openDeck("other.deck");     // 保存せずに別Deckを開く
 if (saveAsDeck()) alert(app.getDeckPath());
 ```
 
-パスは文字列で、相対パスは起動時のカレントフォルダ基準です。空文字列・nullなどは不正な引数として例外になります。引数省略時に現在のパスがない場合、openDeck／saveDeckは例外になります。新規の未保存DeckはsaveAsDeck、またはパス付きsaveDeckで保存してください。
+パスは文字列で、相対パスは通常・Folderでは起動時のカレントフォルダ、deckxでは展開先基準です。空文字列・nullなどは不正な引数として例外になります。引数省略時に現在のパスがない場合、openDeck／saveDeckは例外になります。新規の未保存DeckはsaveAsDeck、またはパス付きsaveDeckで保存してください。
 
 openDeckは指定ファイルを先に検証し、失敗時は現在のDeckを維持します。読み込み成功後の切り替えはイベント処理終了後に行い、スクリプト環境を作り直します。そのため呼び出したイベントの残りのコードは移動前のDeckを参照します。移動後のopenCardでは新しいDeckになります。
 
@@ -97,9 +97,37 @@ openDeckは指定ファイルを先に検証し、失敗時は現在のDeckを�
 - Deck引数を省略した場合：従来どおりAppDataのHomeを開き、なければ内蔵Homeを保存して開きます。
 
 
+## 形式ごとの読み込み・保存制約
+
+Playerは通常Deck、Folderのフォルダまたは`main.deck`、deckxを開けます。
+Magicからdeckxを開く操作は例外です。
+Folder・deckxの`saveDeck()`は現在の保存先に保存します。別パスへの保存や形式変更は拒否するため、
+通常Deck向けの`saveDeck(path)`／`saveAsDeck()`による別名保存の例は適用できません。
+形式変更・配布用出力はMagicのExportを使用します。
+`--magicFolder`の新規作成・既存フォルダの扱いは[Deck形式・Export](FILE_FORMATS.md)を参照してください。
+
 ## 新規Deck
 
-`app.newDeck()` / `newDeck()` は現在のDeckを保存し、新しい未保存Deckを作ってMagicへ切り替えます。切り替えはイベント処理後です。現在のDeckが未保存かつ保存先がない場合は例外になるため、先にsaveDeck(path)／saveAsDeck()で保存してください。保存に失敗した場合も現在のDeckを維持します。新規Deckは「保存」で保存先を指定します。
+Folderでは`app.newDeck()`を拒否します。新規FolderはMagicの「新規」または`--magicFolder`で作成してください。
+
+通常Deck・deckxでの`app.newDeck()` / `newDeck()` は現在のDeckを保存し、新しい未保存Deckを作ってMagicへ切り替えます。切り替えはイベント処理後です。現在のDeckが未保存かつ保存先がない場合は例外になるため、先にsaveDeck(path)／saveAsDeck()で保存してください。保存に失敗した場合も現在のDeckを維持します。新規Deckは「保存」で保存先を指定します。
 
 
 Magicの「Homeを開く」はMagicのまま移動します。未保存なら破棄確認を表示するUI操作で、既定で保存するスクリプトのgoHome()とは保存の扱いが異なります。内蔵Homeの更新で、既存のAppData内のhome.deckを自動上書きすることはありません。
+
+形式ごとの保存・相対パスの一覧は[Deck形式・Export](FILE_FORMATS.md)を参照してください。
+
+## 新規Folder Deck
+
+`app.newFolderDeck(path)` / `newFolderDeck(path)`は新しいFolder Deckの作成を予約します。
+パス省略時は親フォルダを選び、その下に`Untitled`を作成します。キャンセルならfalse、予約成功ならtrueです。
+パス指定時は新しく作成するフォルダの場所を指定します。既存フォルダ・空文字列・不正な型は例外です。
+
+```javascript
+app.newFolderDeck(); // 親フォルダを選択してUntitledを作成
+app.newFolderDeck("C:/Decks/MyDeck"); // 新しいフォルダの場所を指定
+```
+
+現在のDeckを保存し、イベント処理後にフォルダ・main.deck・外部JSを作成してMagicへ切り替えます。
+予約中は既存のDeck切り替えと同じ制約が適用されます。スクリプトが例外で終了して予約を取り消した場合は作成しません。
+現在のDeckに未保存変更があり保存先がない場合は、先に保存してください。

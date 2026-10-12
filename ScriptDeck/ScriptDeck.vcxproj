@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64"><Configuration>Debug</Configuration><Platform>x64</Platform></ProjectConfiguration>
@@ -21,6 +21,8 @@
     <ClCompile Include="$(MSBuildProjectDirectory)\LaunchOptions.cpp" />
     <ClCompile Include="$(MSBuildProjectDirectory)\ScriptDeckApp.cpp" />
     <ClCompile Include="$(MSBuildProjectDirectory)\Stack.cpp" />
+    <ClInclude Include="$(MSBuildProjectDirectory)\DeckArchive.h" />
+    <ClInclude Include="$(MSBuildProjectDirectory)\VSCodeLauncher.h" />
     <ClCompile Include="$(MSBuildProjectDirectory)\GuiView.cpp" />
     <ClCompile Include="$(MSBuildProjectDirectory)\GuiWindow.cpp" />
     <ClCompile Include="$(MSBuildProjectDirectory)\ScriptEngine.cpp" />
@@ -53,6 +55,7 @@
     <ClInclude Include="$(MSBuildProjectDirectory)\WindowsAssociation.h" />
     <None Include="$(MSBuildProjectDirectory)\assets\scriptdeck.ico" />
     <None Include="$(MSBuildProjectDirectory)\assets\deck.ico" />
+    <None Include="$(MSBuildProjectDirectory)\assets\deckx.ico" />
     <None Include="$(MSBuildProjectDirectory)\assets\home.deck" />
     <ClInclude Include="$(MSBuildProjectDirectory)\WindowState.h" />
     <ClInclude Include="$(MSBuildProjectDirectory)\AppScriptApi.h" />

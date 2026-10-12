@@ -1,4 +1,4 @@
-﻿#include "ScriptEngine.h"
+#include "ScriptEngine.h"
 #include "quickjs/quickjs.h"
 #include <chrono>
 #include <stdexcept>
@@ -108,7 +108,7 @@ struct ScriptEngine::Impl
         OpenDialog, SaveDialog, FolderDialog, Console, Magic, BeepOp, PlayWav, StopWav, Exit,
         ReadText, FileWriteText, AppendText, FileReadBytes, FileWriteBytes, Exists, ExistsFile, ExistsDir,
         ResolvePath, GetFiles, GetDirectories, Move, Rename, Delete,
-        GetName, GetNameWithoutExt, GetExt, GetParent, GetFrame, GetNameWithoutFrame, ToWindowsPath, ToUnixPath, NextCard, PrevCard, TopCard, EndCard, GoCardIndex, GoCard, GoHome, ChangeDeck, NewDeck, OpenDeck, SaveDeck, SaveAsDeck, Install, Uninstall, SetTopMost, GetTopMost, WindowFront
+        GetName, GetNameWithoutExt, GetExt, GetParent, GetFrame, GetNameWithoutFrame, ToWindowsPath, ToUnixPath, NextCard, PrevCard, TopCard, EndCard, GoCardIndex, GoCard, GoHome, ChangeDeck, NewDeck, NewFolderDeck, OpenDeck, SaveDeck, SaveAsDeck, Install, Uninstall, SetTopMost, GetTopMost, WindowFront
     };
     static JSValue Argument(int argc, JSValueConst* argv, int index) { return index < argc ? argv[index] : JS_UNDEFINED; }
     static std::string Text(JSContext* ctx, JSValueConst value)
@@ -406,6 +406,12 @@ struct ScriptEngine::Impl
             case NewDeck:
                 if(!self.host.newDeck)throw std::runtime_error("New deck service is unavailable.");
                 self.host.newDeck();break;
+            case NewFolderDeck: {
+                if(!self.host.newFolderDeck)throw std::runtime_error("New Folder deck service is unavailable.");
+                auto path=JS_IsUndefined(a)?std::filesystem::path{}:self.files.Resolve(Text(ctx,a));
+                if(!JS_IsUndefined(a)&&Text(ctx,a).empty())throw std::invalid_argument("Folder path is empty.");
+                result=JS_NewBool(ctx,self.host.newFolderDeck(path));break;
+            }
             case OpenDeck: case SaveDeck: {
                 const auto path=JS_IsUndefined(a)?std::filesystem::path{}:self.files.Resolve(Text(ctx,a));
                 if(!JS_IsUndefined(a) && Text(ctx,a).empty())throw std::invalid_argument("Deck path is empty.");
@@ -449,7 +455,7 @@ struct ScriptEngine::Impl
         const Entry apps[]={ {"getEnv",GetEnv,1},{"launchProcess",LaunchProcess,1},{"runProcess",RunProcess,1},{"readClipboard",ReadClipboard,0},{"writeClipboard",WriteClipboard,1},{"getHomePath",GetHomePath,0},{"getDeckPath",GetDeckPath,0},{"getExePath",GetExePath,0},
             {"getDocumentPath",GetDocumentPath,0},{"getDocumentsPath",GetDocumentPath,0},{"getTempPath",GetTempPath,0},{"getAppDataPath",GetAppDataPath,0},{"getArgs",GetArgs,0},{"openFileDialog",OpenDialog,0},{"saveFileDialog",SaveDialog,0},{"selectFolderDialog",FolderDialog,0},{"write",Write,1},{"writeLine",WriteLine,1},{"writeError",WriteError,1},
             {"readBytes",ReadBytes,1},{"writeBytes",WriteBytes,1},{"readBinary",ReadBinary,0},{"writeBinary",WriteBinary,1},
-            {"install",Install,0},{"uninstall",Uninstall,0},{"goHome",GoHome,0},{"nextCard",NextCard,0},{"prevCard",PrevCard,0},{"topCard",TopCard,0},{"endCard",EndCard,0},{"goCardIndex",GoCardIndex,1},{"goCard",GoCard,1},{"changeDeck",ChangeDeck,1},{"newDeck",NewDeck,0},{"openDeck",OpenDeck,0},{"saveDeck",SaveDeck,0},{"saveAsDeck",SaveAsDeck,0},{"setTopMost",SetTopMost,1},{"getTopMost",GetTopMost,0},{"windowFront",WindowFront,0},{"flush",Flush,0},{"setConsoleMode",Console,1},{"setMagic",Magic,1},{"beep",BeepOp,0},{"playWav",PlayWav,1},{"stopWav",StopWav,0},{"exit",Exit,0}};
+            {"install",Install,0},{"uninstall",Uninstall,0},{"goHome",GoHome,0},{"nextCard",NextCard,0},{"prevCard",PrevCard,0},{"topCard",TopCard,0},{"endCard",EndCard,0},{"goCardIndex",GoCardIndex,1},{"goCard",GoCard,1},{"changeDeck",ChangeDeck,1},{"newDeck",NewDeck,0},{"newFolderDeck",NewFolderDeck,0},{"openDeck",OpenDeck,0},{"saveDeck",SaveDeck,0},{"saveAsDeck",SaveAsDeck,0},{"setTopMost",SetTopMost,1},{"getTopMost",GetTopMost,0},{"windowFront",WindowFront,0},{"flush",Flush,0},{"setConsoleMode",Console,1},{"setMagic",Magic,1},{"beep",BeepOp,0},{"playWav",PlayWav,1},{"stopWav",StopWav,0},{"exit",Exit,0}};
         const Entry fs[]={ {"getFileSize",GetFileSize,1},{"getFileTimes",GetFileTimes,1},{"getFileInfo",GetFileInfo,1},{"getFileTimestamp",GetFileTimestamp,1},{"readText",ReadText,1},{"writeText",FileWriteText,2},{"appendText",AppendText,2},{"readBytes",FileReadBytes,1},{"writeBytes",FileWriteBytes,2},
             {"exists",Exists,1},{"existsFile",ExistsFile,1},{"existsDir",ExistsDir,1},{"resolvePath",ResolvePath,1},
             {"toWindowsPath",ToWindowsPath,1},{"toUnixPath",ToUnixPath,1},{"getName",GetName,1},{"getNameWithoutExt",GetNameWithoutExt,1},{"getExt",GetExt,1},{"getParent",GetParent,1},{"getFrame",GetFrame,1},{"getNameWithoutFrame",GetNameWithoutFrame,1},{"getFiles",GetFiles,1},{"getDirectories",GetDirectories,1},{"move",Move,2},{"rename",Rename,2},{"delete",Delete,1}};

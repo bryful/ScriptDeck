@@ -1,8 +1,8 @@
 # アプリケーション・入出力API
 
-更新日：2026-10-08
+更新日：2026-10-12
 
-PlayerとMagicの実行プレビューで利用できます。不正な引数はTypeError、操作失敗は例外になります。
+Playerと通常DeckのMagic実行プレビューで利用できます。不正な引数はTypeError、操作失敗は例外になります。
 
 ## 引数・実行・出力
 
@@ -22,7 +22,7 @@ PlayerとMagicの実行プレビューで利用できます。不正な引数は
 | `app.writeBinary(bytes)` | Uint8ArrayまたはArrayBuffer全体を標準出力へ |
 | `app.flush()` | 標準出力をフラッシュ |
 | `app.setConsoleMode(enabled)` | コンソールへの接続／切り離し。再接続可能 |
-| `app.setMagic(enabled)` | trueでMagic、falseでPlayer |
+| `app.setMagic(enabled)` | trueでMagic、falseでPlayer。deckxからMagicへの移行は例外 |
 | `app.exit(code = 0)` | 現在のスクリプトを打ち切り、終了コードを指定して終了要求 |
 
 write系・writeError・read系は必要に応じてコンソールを自動接続します。標準入出力のリダイレクトは維持します。文字列出力は文字列を渡してください。バイナリーには改行・BOM・ログを加えません。write系は出力後にフラッシュします。未保存の変更がある場合、exitは通常の終了と同じ処理を行います。Magicでは破棄確認、Playerでは現在のDeckへ自動保存します。確認のキャンセル・保存の失敗時はアプリを継続しますが、打ち切ったコードの続きへは戻りません。終了コードは0～2147483647です。
@@ -78,14 +78,13 @@ app.setMagic(false); // Magic → Player
 ```
 
 引数はbooleanを1つ。戻り値はundefined。同じモードへの呼び出しは何もしない。
+deckxではtrueを指定すると例外になります。FolderのMagicは画面編集専用で、コード編集・実行プレビューはありません。
 切り替えでは編集中のDeck・カード・部品と未保存状態を維持し、自動保存しません。Playerはカードサイズの固定ウィンドウ、Magicは編集UIを持つリサイズ可能ウィンドウです。
-
 
 
 ## app.setConsoleMode
 
 app.setConsoleMode(true)で実行中に親コンソールへ接続し、親がなければ作成します。falseでScriptDeckの接続を解除し、単独で作成したコンソールを閉じます。親のcmd/PowerShellは終了しません。再度trueを呼べます。標準入力・出力・エラーを再接続し、ファイル・パイプへのリダイレクトは切り替え後も維持します。無効中の非リダイレクト出力はNULへ送ります。デッキの保存状態・Player/Magicは変えません。
-
 
 
 ## ウィンドウ操作
@@ -108,7 +107,7 @@ TopMostは実行中の状態で、Deckには保存しません。`windowFront` �
 | API | 戻り値 |
 | --- | --- |
 | `app.getHomePath()` | Homeとして使用する `home.deck` のフルパス。 |
-| `app.getDeckPath()` | 現在開いているDeckのフルパス。未保存の新規Deckなら空文字列。 |
+| `app.getDeckPath()` | 通常はDeckのフルパス、Folderはmain.deck、deckxは元のZIPファイルのフルパス。未保存なら空文字列。 |
 | `app.getExePath()` | 実行中の `ScriptDeck.exe` のフルパス。 |
 | `app.getDocumentPath()` | WindowsのDocumentsの設定先。OneDriveなどへの移動にも対応。 |
 | `app.getDocumentsPath()` | `app.getDocumentPath()` の別名。 |
@@ -124,10 +123,10 @@ alert({
     temp: app.getTempPath(),
     appData: app.getAppDataPath()
 });
-const deckFolder = fs.getParent(app.getDeckPath());
+const deckFolder = fs.getParent(app.getDeckPath()); // deckxではZIPがあるフォルダ
 ```
 
-`getDeckPath()` は呼び出した時点のDeckを返します。`changeDeck()`／`goHome()` はイベント処理後に反映されるため、その呼び出し直後の同じイベント内では移動前のパスです。移動先の `openCard` では移動先のパスを返します。PlayerとMagicの実行プレビューで利用できます。
+`getDeckPath()` は呼び出した時点のDeckを返します。`changeDeck()`／`goHome()` はイベント処理後に反映されるため、その呼び出し直後の同じイベント内では移動前のパスです。移動先の `openCard` では移動先のパスを返します。Playerと通常DeckのMagic実行プレビューで利用できます。
 
 ## テキストのクリップボード
 
@@ -143,7 +142,6 @@ alert(text);
 ```
 
 WindowsのUnicodeテキスト形式を使用し、日本語・絵文字・改行に対応します。画像やファイル一覧の読み書きには対応しません。書き込みは既存のクリップボード内容を置き換えます。NUL文字を含む文字列、文字列以外、32 MiBを超えるUTF-8テキストは受け付けません。読み取りも32 MiBまでです。他のアプリが使用中など、クリップボードを開けない場合は例外になります。必要に応じてtry/catchで処理してください。
-
 
 
 ## 環境変数
@@ -174,7 +172,7 @@ alert(result);
 const result = app.runProcess("cmd.exe", ["/d", "/c", "echo Test"]);
 ```
 
-子プロセスの作業フォルダはScriptDeck起動時のカレントフォルダ、環境変数は現在のプロセスから継承します。実行ファイル名だけならOSの検索規則で探し、相対パスを含む場合は作業フォルダを基準にします。起動したプロセスはScriptDeck終了後も独立して実行できます。
+子プロセスの作業フォルダは通常・FolderではScriptDeck起動時のカレントフォルダ、deckxでは展開先です。環境変数は現在のプロセスから継承します。実行ファイル名だけならOSの検索規則で探し、相対パスを含む場合は作業フォルダを基準にします。起動したプロセスはScriptDeck終了後も独立して実行できます。
 
 runProcessの標準出力はUTF-8として扱い、先頭のUTF-8 BOMを除去します。改行はそのまま保持します。出力先アプリもUTF-8出力に設定してください。取得上限は32 MiBです。標準エラーは取得せず破棄し、標準入力は空（EOF）です。終了コードが非ゼロでも、取得した標準出力を返します。
 
@@ -186,4 +184,6 @@ runProcessの標準出力はUTF-8として扱い、先頭のUTF-8 BOMを除去�
 - Deckの新規作成・読み込み・保存・移動： [NAVIGATION_API.md](NAVIGATION_API.md)。
 - カード・部品へのアクセス： [OBJECT_API.md](OBJECT_API.md)。
 - ファイル選択・保存ダイアログ、サイズ・日時： [FILE_API.md](FILE_API.md)。
-- `app.install()` / `app.uninstall()` によるDeck関連付け： [USER_GUIDE.md](USER_GUIDE.md)。
+- `app.install()` / `app.uninstall()` による`.deck`／`.deckx`の関連付け： [USER_GUIDE.md](USER_GUIDE.md)。
+
+形式ごとの保存・相対パスの一覧は[Deck形式・Export](FILE_FORMATS.md)を参照してください。

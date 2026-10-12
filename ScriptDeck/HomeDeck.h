@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "Stack.h"
 #include "Utf8Path.h"
 #include "ResourceIds.h"
@@ -76,7 +76,7 @@ inline std::string EmbeddedHomeDeck()
           "y": 100,
           "width": 180,
           "height": 36,
-          "script": "function mouseUp() { const path = app.openFileDialog({title: \"Open Deck\", filters: [{name: \"ScriptDeck\", pattern: \"*.deck\"}]}); if (path !== null) app.changeDeck(path); }"
+          "script": "function mouseUp() { const path = app.openFileDialog({title: \"Open Deck\", filters: [{name: \"ScriptDeck\", pattern: \"*.deck;*.deckx\"}]}); if (path !== null) app.changeDeck(path); }"
         },
         {
           "id": "new",
@@ -88,6 +88,17 @@ inline std::string EmbeddedHomeDeck()
           "width": 180,
           "height": 36,
           "script": "function mouseUp(event) { app.newDeck(); }"
+        },
+        {
+          "id": "newFolder",
+          "type": "button",
+          "name": "newFolder",
+          "text": "新規フォルダーデッキ",
+          "x": 32,
+          "y": 204,
+          "width": 240,
+          "height": 36,
+          "script": "function mouseUp(event) { app.newFolderDeck(); }"
         }
       ]
     }

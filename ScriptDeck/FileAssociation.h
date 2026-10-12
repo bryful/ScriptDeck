@@ -64,49 +64,62 @@ public:
         }catch(...){}
     }
 };
+inline const std::wstring ArchiveExtension=L"Software\\Classes\\.deckx";
+inline const std::wstring ArchiveProgId=L"ScriptDeck.Deckx";
+inline const std::wstring ArchiveTypeKey=L"Software\\Classes\\ScriptDeck.Deckx";
+inline const std::wstring ArchiveMetadata=L"Software\\ScriptDeck\\ArchiveAssociation";
 inline bool Install(Registry& registry,const std::wstring& executable)
 {
     if(executable.empty()||executable.find(L'"')!=std::wstring::npos)throw std::invalid_argument("Invalid executable path.");
-    const auto previous=registry.Read(Extension,L"");
     Transaction tx(registry);
-    // Keep the original association when registering again or moving ScriptDeck.
-    if(!SamePath(Text(previous),ProgId) || !registry.Read(Metadata,L"PreviousPresent")) {
-        tx.Write(Metadata,L"PreviousPresent",Number(previous && !SamePath(Text(previous),ProgId)?1:0));
-        if(previous) {
-            tx.Write(Metadata,L"PreviousType",Number(previous->type));
-            Value data{3,previous->bytes};tx.Write(Metadata,L"PreviousData",data);
+    auto type=[&](const std::wstring& extension,const std::wstring& progId,const std::wstring& typeKey,const std::wstring& metadata,int icon,const std::wstring& label) {
+        const auto previous=registry.Read(extension,L"");
+        if(!SamePath(Text(previous),progId) || !registry.Read(metadata,L"PreviousPresent")) {
+            tx.Write(metadata,L"PreviousPresent",Number(previous && !SamePath(Text(previous),progId)?1:0));
+            if(previous) {
+                tx.Write(metadata,L"PreviousType",Number(previous->type));
+                tx.Write(metadata,L"PreviousData",Value{3,previous->bytes});
+            }
         }
-    }
-    tx.Write(Metadata,L"Executable",String(executable));
-    tx.Write(TypeKey,L"",String(L"ScriptDeck Deck"));
-    tx.Write(TypeKey+L"\\DefaultIcon",L"",String(L"\""+executable+L"\",1"));
-    tx.Write(TypeKey+L"\\shell",L"",String(L"open"));
-    tx.Write(TypeKey+L"\\shell\\open\\command",L"",String(L"\""+executable+L"\" \"%1\""));
-    tx.Write(Extension+L"\\OpenWithProgids",ProgId,Value{});
+        tx.Write(metadata,L"Executable",String(executable));
+        tx.Write(typeKey,L"",String(label));
+        tx.Write(typeKey+L"\\DefaultIcon",L"",String(L"\""+executable+L"\","+std::to_wstring(icon)));
+        tx.Write(typeKey+L"\\shell",L"",String(L"open"));
+        tx.Write(typeKey+L"\\shell\\open\\command",L"",String(L"\""+executable+L"\" \"%1\""));
+        tx.Write(extension+L"\\OpenWithProgids",progId,Value{});
+        tx.Write(extension,L"",String(progId));
+    };
+    type(Extension,ProgId,TypeKey,Metadata,1,L"ScriptDeck Deck");
+    type(ArchiveExtension,ArchiveProgId,ArchiveTypeKey,ArchiveMetadata,2,L"ScriptDeck Package");
     tx.Write(Capabilities,L"ApplicationName",String(L"ScriptDeck"));
     tx.Write(Capabilities,L"ApplicationDescription",String(L"ScriptDeck card applications"));
     tx.Write(Capabilities,L"ApplicationIcon",String(L"\""+executable+L"\",0"));
     tx.Write(Capabilities+L"\\FileAssociations",L".deck",String(ProgId));
+    tx.Write(Capabilities+L"\\FileAssociations",L".deckx",String(ArchiveProgId));
     tx.Write(Registered,L"ScriptDeck",String(Capabilities));
-    tx.Write(Extension,L"",String(ProgId));
     tx.Commit();return true;
 }
 inline bool Uninstall(Registry& registry,const std::wstring& executable)
 {
     const auto owner=Text(registry.Read(Metadata,L"Executable"));
-    if(owner.empty() || !SamePath(owner,executable))return false;
-    if(SamePath(Text(registry.Read(Extension,L"")),ProgId)) {
-        if(Number(registry.Read(Metadata,L"PreviousPresent"))) {
-            const auto data=registry.Read(Metadata,L"PreviousData");
-            if(!data || data->type!=3)throw std::runtime_error("Association backup is missing.");
-            registry.Write(Extension,L"",Value{Number(registry.Read(Metadata,L"PreviousType")),data->bytes});
-        }else registry.RemoveValue(Extension,L"");
-    }
-    // Remove only our registration. Leave .deck and other handlers in place.
-    const auto offered=registry.Read(Extension+L"\\OpenWithProgids",ProgId);
-    if(offered && *offered==Value{})registry.RemoveValue(Extension+L"\\OpenWithProgids",ProgId);
+    const auto archiveOwner=Text(registry.Read(ArchiveMetadata,L"Executable"));
+    if(owner.empty() || !SamePath(owner,executable) || (!archiveOwner.empty()&&!SamePath(archiveOwner,executable)))return false;
+    auto type=[&](const std::wstring& extension,const std::wstring& progId,const std::wstring& typeKey,const std::wstring& metadata) {
+        if(Text(registry.Read(metadata,L"Executable")).empty())return; // Legacy .deck-only installation.
+        if(SamePath(Text(registry.Read(extension,L"")),progId)) {
+            if(Number(registry.Read(metadata,L"PreviousPresent"))) {
+                const auto data=registry.Read(metadata,L"PreviousData");
+                if(!data || data->type!=3)throw std::runtime_error("Association backup is missing.");
+                registry.Write(extension,L"",Value{Number(registry.Read(metadata,L"PreviousType")),data->bytes});
+            }else registry.RemoveValue(extension,L"");
+        }
+        const auto offered=registry.Read(extension+L"\\OpenWithProgids",progId);
+        if(offered && *offered==Value{})registry.RemoveValue(extension+L"\\OpenWithProgids",progId);
+        registry.RemoveTree(typeKey);registry.RemoveTree(metadata);
+    };
+    type(ArchiveExtension,ArchiveProgId,ArchiveTypeKey,ArchiveMetadata);
+    type(Extension,ProgId,TypeKey,Metadata);
     if(SamePath(Text(registry.Read(Registered,L"ScriptDeck")),Capabilities))registry.RemoveValue(Registered,L"ScriptDeck");
-    registry.RemoveTree(TypeKey);registry.RemoveTree(Capabilities);registry.RemoveTree(Metadata);
-    return true;
+    registry.RemoveTree(Capabilities);return true;
 }
 }

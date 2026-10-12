@@ -1,4 +1,4 @@
-﻿#include "Utf8Path.h"
+#include "Utf8Path.h"
 #include "LaunchOptions.h"
 #include <iostream>
 
@@ -17,9 +17,10 @@ LaunchOptions ParseCommandLine(const std::vector<std::string>& args)
         if (!literal && (arg == "-h" || arg == "--help" || arg == "/?")) {
             o.showHelp = true; continue;
         }
-        if (!literal && (arg == "-magic" || arg == "-run")) {
+        if (!literal && (arg == "-magic" || arg == "--magic" || arg == "-magicFolder" || arg == "--magicFolder" || arg == "-run")) {
             if (modeSet) { o.error = "Specify only one launch mode."; return o; }
-            o.mode = arg == "-magic" ? LaunchMode::Magic : LaunchMode::Console;
+            o.mode = arg == "-run" ? LaunchMode::Console : LaunchMode::Magic;
+            o.folderMode = arg == "-magicFolder" || arg == "--magicFolder";
             modeSet = true; continue;
         }
         // -run の入力は - で始まる文字列も受け付ける。
@@ -52,12 +53,15 @@ LaunchOptions ParseCommandLine(int argc, char* argv[])
 void PrintHelp()
 {
     std::cout << "ScriptDeck\n\nUsage:\n"
-        << "  ScriptDeck.exe [deckfile [args...]]\n"
+        << "  ScriptDeck.exe [deckfile|folder|package.deckx [args...]]\n"
         << "  ScriptDeck.exe -magic [deckfile [args...]]\n"
+        << "  ScriptDeck.exe --magicFolder [folder [args...]]\n"
         << "  ScriptDeck.exe -run deckfile info\n"
         << "  ScriptDeck.exe -run deckfile dump\n"
         << "  ScriptDeck.exe -run deckfile validate\n"
         << "  ScriptDeck.exe -run deckfile copy output.deck\n\n"
+        << "  ScriptDeck.exe -run deckfile exportDeck output.deck\n"
+        << "  ScriptDeck.exe -run deckfile exportDeckx output.deckx\n\n"
         << "Default: Player. -magic: text editor. -run: JSON utilities.\n"
         << "Use -- to end option parsing. Player/Magic preview execute JavaScript with app and fs APIs.\n";
 }

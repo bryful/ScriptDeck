@@ -1,4 +1,5 @@
 #include "ScriptEngine.h"
+#include "Utf8Path.h"
 #include <iostream>
 #include <stdexcept>
 #include <vector>
@@ -32,7 +33,7 @@ int main()
         bool timeout=false;try{js.RunGlobal("while(true){}", "loop.js");}catch(const std::exception& e){timeout=std::string(e.what()).find("time limit")!=std::string::npos;}Check(timeout,"Loop did not time out.");
         bool builtinTimeout=false;try{js.RunGlobal("while(true){app.getArgs();}", "builtin-loop.js");}catch(const std::exception& e){builtinTimeout=std::string(e.what()).find("time limit")!=std::string::npos;}Check(builtinTimeout,"Builtin loop did not time out.");
         js.RunGlobal("alert('after-timeout');", "recovery.js"); Check(messages.back()=="after-timeout", "Timeout recovery failed.");
-        std::filesystem::path activeDeck=std::filesystem::current_path()/"日本語.deck";
+        std::filesystem::path activeDeck=std::filesystem::current_path()/PathFromUtf8("日本語.deck");
         ScriptHost pathsHost;pathsHost.getDeckPath=[&]{return activeDeck;};
         ScriptEngine paths([](const std::string&){},pathsHost);
         paths.RunGlobal(R"JS(
